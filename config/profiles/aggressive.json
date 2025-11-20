@@ -1,0 +1,59 @@
+{
+  "target": {
+    "url": "https://example.com",
+    "crawlDepth": 3,
+    "maxPages": 100,
+    "timeout": 60000
+  },
+  "scanners": {
+    "passive": {
+      "enabled": true,
+      "interceptTypes": ["xhr", "fetch", "document", "websocket"],
+      "maxResponseSize": 52428800,
+      "skipStaticResources": true
+    },
+    "active": {
+      "enabled": true,
+      "aggressiveness": "high",
+      "payloadSets": [
+        "sql-injection",
+        "xss",
+        "command-injection",
+        "path-traversal",
+        "xxe",
+        "nosql-injection"
+      ],
+      "maxInputsPerPage": 200,
+      "delayBetweenRequests": 50,
+      "skipReadOnlyInputs": false,
+      "submitForms": true
+    }
+  },
+  "detectors": {
+    "enabled": ["*"],
+    "disabled": [],
+    "customRules": [],
+    "sensitivity": "strict",
+    "falsePositiveThreshold": 0.2,
+    "minConfidence": 0.3
+  },
+  "browser": {
+    "type": "chromium",
+    "headless": true,
+    "ignoreHTTPSErrors": false
+  },
+  "reporting": {
+    "formats": ["json", "html", "sarif", "console"],
+    "outputDir": "./reports",
+    "includeScreenshots": true,
+    "verbosity": "detailed"
+  },
+  "advanced": {
+    "parallelism": 3,
+    "retryFailedRequests": true,
+    "maxRetries": 5,
+    "logLevel": "debug",
+    "collectMetrics": true,
+    "maxScanDuration": 3600000
+  }
+}

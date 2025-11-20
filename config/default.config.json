@@ -1,0 +1,60 @@
+{
+  "target": {
+    "url": "https://example.com",
+    "crawlDepth": 1,
+    "maxPages": 10,
+    "timeout": 30000,
+    "scope": {
+      "include": ["https://example\\.com/.*"],
+      "exclude": ["https://example\\.com/logout"]
+    }
+  },
+  "scanners": {
+    "passive": {
+      "enabled": true,
+      "interceptTypes": ["xhr", "fetch", "document"],
+      "maxResponseSize": 10485760,
+      "skipStaticResources": true
+    },
+    "active": {
+      "enabled": true,
+      "aggressiveness": "medium",
+      "payloadSets": ["sql-injection", "xss", "command-injection"],
+      "maxInputsPerPage": 50,
+      "delayBetweenRequests": 100,
+      "skipReadOnlyInputs": true,
+      "submitForms": false
+    }
+  },
+  "detectors": {
+    "enabled": ["*"],
+    "disabled": [],
+    "customRules": [],
+    "sensitivity": "normal",
+    "falsePositiveThreshold": 0.3,
+    "minConfidence": 0.5
+  },
+  "browser": {
+    "type": "chromium",
+    "headless": true,
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "ignoreHTTPSErrors": false
+  },
+  "reporting": {
+    "formats": ["json", "html", "console"],
+    "outputDir": "./reports",
+    "includeScreenshots": true,
+    "verbosity": "normal"
+  },
+  "advanced": {
+    "parallelism": 1,
+    "retryFailedRequests": true,
+    "maxRetries": 3,
+    "logLevel": "info",
+    "plugins": [],
+    "collectMetrics": true
+  }
+}

