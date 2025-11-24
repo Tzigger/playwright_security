@@ -86,6 +86,7 @@ export class SqlInjectionDetector implements IActiveDetector {
     const results = await this.injector.injectMultiple(page, surface, payloads, {
       encoding: PayloadEncoding.NONE,
       submit: true,
+      baseUrl,
     });
 
     for (const result of results) {
@@ -108,11 +109,13 @@ export class SqlInjectionDetector implements IActiveDetector {
     const trueResults = await this.injector.injectMultiple(page, surface, truePayloads, {
       encoding: PayloadEncoding.NONE,
       submit: true,
+      baseUrl,
     });
 
     const falseResults = await this.injector.injectMultiple(page, surface, falsePayloads, {
       encoding: PayloadEncoding.NONE,
       submit: true,
+      baseUrl,
     });
 
     // Compare responses - if true conditions return different content than false, likely vulnerable
@@ -146,6 +149,7 @@ export class SqlInjectionDetector implements IActiveDetector {
       const result = await this.injector.inject(page, surface, payload, {
         encoding: PayloadEncoding.NONE,
         submit: true,
+        baseUrl,
       });
       const duration = Date.now() - startTime;
 
@@ -174,6 +178,7 @@ export class SqlInjectionDetector implements IActiveDetector {
     const results = await this.injector.injectMultiple(page, surface, unionPayloads, {
       encoding: PayloadEncoding.NONE,
       submit: true,
+      baseUrl,
     });
 
     for (const result of results) {

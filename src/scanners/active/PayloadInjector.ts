@@ -69,6 +69,7 @@ export class PayloadInjector {
       encoding?: PayloadEncoding;
       strategy?: InjectionStrategy;
       submit?: boolean;
+      baseUrl?: string;
     } = {}
   ): Promise<InjectionResult> {
     const encoding = options.encoding || PayloadEncoding.NONE;
@@ -76,6 +77,20 @@ export class PayloadInjector {
     const submit = options.submit !== undefined ? options.submit : true;
 
     this.logger.debug(`Injecting payload into ${surface.name} (${surface.type})`);
+
+    // Restore state if baseUrl is provided
+    if (options.baseUrl) {
+      try {
+        const currentUrl = page.url();
+        // Only reload if we are not on the base URL or if we suspect state is dirty
+        // For robustness, we always reload for form inputs as they likely caused navigation
+        if (surface.type === AttackSurfaceType.FORM_INPUT || currentUrl !== options.baseUrl) {
+           await page.goto(options.baseUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to restore state to ${options.baseUrl}: ${error}`);
+      }
+    }
 
     const result: InjectionResult = {
       payload,
@@ -145,6 +160,7 @@ export class PayloadInjector {
       strategy?: InjectionStrategy;
       submit?: boolean;
       delayMs?: number;
+      baseUrl?: string;
     } = {}
   ): Promise<InjectionResult[]> {
     const results: InjectionResult[] = [];
@@ -252,11 +268,11 @@ export class PayloadInjector {
     payload: string,
     submit: boolean
   ): Promise<void> {
-    // ALWAYS prefer selector over element handle (element handles become stale after page interactions)
+    // Prioritize selector to avoid detached elements after reload
     if (surface.selector) {
-      await page.fill(surface.selector, payload, { timeout: 1000 });
+      await page.fill(surface.selector, payload);
     } else if (surface.element) {
-      await surface.element.fill(payload, { timeout: 1000 });
+      await surface.element.fill(payload);
     } else {
       throw new Error('No element or selector available for injection');
     }

@@ -25,4 +25,9 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   verbose: true,
   testTimeout: 30000,
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'tests/integration/phase2-comprehensive.test.ts',
+    'tests/integration/phase3-active-scanner.test.ts'
+  ]
 };

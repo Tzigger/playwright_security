@@ -47,9 +47,23 @@ export class XssDetector implements IActiveDetector {
 
     for (const surface of xssTargets) {
       try {
-        // Test reflected XSS
-        const reflectedVuln = await this.testReflectedXss(page, surface, baseUrl);
-        if (reflectedVuln) vulnerabilities.push(reflectedVuln);
+        // For URL parameters, we don't know the reflection context, so we should try multiple strategies.
+        // DomExplorer assigns 'URL' context to parameters by default, but they often reflect in HTML body or attributes.
+        if (surface.type === AttackSurfaceType.URL_PARAMETER) {
+           // Try HTML context (breaking out of tags or direct reflection)
+           const htmlContextSurface = { ...surface, context: InjectionContext.HTML };
+           const reflectedHtml = await this.testReflectedXss(page, htmlContextSurface, baseUrl);
+           if (reflectedHtml) vulnerabilities.push(reflectedHtml);
+
+           // Try Attribute context (breaking out of attributes)
+           const attrContextSurface = { ...surface, context: InjectionContext.HTML_ATTRIBUTE };
+           const reflectedAttr = await this.testReflectedXss(page, attrContextSurface, baseUrl);
+           if (reflectedAttr) vulnerabilities.push(reflectedAttr);
+        } else {
+           // Standard detection for other surfaces
+           const reflectedVuln = await this.testReflectedXss(page, surface, baseUrl);
+           if (reflectedVuln) vulnerabilities.push(reflectedVuln);
+        }
 
         // Test stored XSS (if form submission is involved)
         if (surface.metadata?.formAction) {
@@ -79,6 +93,7 @@ export class XssDetector implements IActiveDetector {
         const result = await this.injector.inject(page, surface, payload, {
           encoding: PayloadEncoding.NONE,
           submit: true,
+          baseUrl,
         });
 
         // Check if payload is reflected in response
@@ -104,6 +119,7 @@ export class XssDetector implements IActiveDetector {
       const result = await this.injector.inject(page, surface, storedPayload, {
         encoding: PayloadEncoding.NONE,
         submit: true,
+        baseUrl,
       });
 
       // Wait for page to settle

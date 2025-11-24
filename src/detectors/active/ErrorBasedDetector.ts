@@ -47,6 +47,7 @@ export class ErrorBasedDetector implements IActiveDetector {
           const result = await this.injector.inject(page, surface, payload, {
             encoding: PayloadEncoding.NONE,
             submit: true,
+            baseUrl,
           });
 
           const errorVulns = await this.analyzeInjectionResult(result);

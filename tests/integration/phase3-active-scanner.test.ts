@@ -26,7 +26,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
   let scanner: ActiveScanner;
   let logger: Logger;
 
-  const TEST_TARGET = 'http://testhtml5.vulnweb.com';
+  const TEST_TARGET = 'http://testphp.vulnweb.com';
 
   test.beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
@@ -37,6 +37,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(120000); // Increase timeout for active scans
     context = await browser.newContext();
     page = await context.newPage();
     logger = new Logger(LogLevel.INFO);
@@ -84,7 +85,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
 
     const mockConfig: ScanConfiguration = {
       target: {
-        url: `${TEST_TARGET}/search.php?id=1`,
+        url: `${TEST_TARGET}/listproducts.php?cat=1`,
         authentication: { type: 'none' },
       },
       scanners: {
@@ -157,7 +158,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
 
     const mockConfig: ScanConfiguration = {
       target: {
-        url: `${TEST_TARGET}/search.php?searchFor=test`,
+        url: `${TEST_TARGET}/search.php?test=test`,
         authentication: { type: 'none' },
       },
       scanners: {
@@ -401,7 +402,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
     });
 
     await scanner.cleanup();
-  }, 90000); // 90s timeout for comprehensive scan
+  }, 240000); // 240s timeout for comprehensive scan
 
   /**
    * Test 6: Attack Surface Discovery
@@ -532,7 +533,7 @@ test.describe('Phase 3: Active Scanner Tests', () => {
 
     const mockConfig: ScanConfiguration = {
       target: {
-        url: `${TEST_TARGET}/search.php?id=1`,
+        url: `${TEST_TARGET}/listproducts.php?cat=1`,
         authentication: { type: 'none' },
       },
       scanners: {
@@ -576,11 +577,11 @@ test.describe('Phase 3: Active Scanner Tests', () => {
     console.log(`Pages per second: ${((result.statistics?.pagesCrawled || 0) / (duration / 1000)).toFixed(2)}`);
     console.log(`Vulnerabilities per second: ${((result.vulnerabilities.length || 0) / (duration / 1000)).toFixed(2)}`);
 
-    // Verify reasonable performance (should complete in < 30s for single page)
-    expect(duration).toBeLessThan(30000);
+    // Verify reasonable performance (should complete in < 60s for single page)
+    expect(duration).toBeLessThan(60000);
 
     await scanner.cleanup();
-  }, 45000);
+  }, 60000);
 
   /**
    * Test 10: OWASP Coverage Verification

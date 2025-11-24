@@ -39,6 +39,7 @@ import {
 } from '../../src/types/enums';
 import { Vulnerability } from '../../src/types/vulnerability';
 import { ScanResult } from '../../src/types/scan-result';
+import { validateScanConfiguration } from '../../src/utils/validators/config-validator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -104,12 +105,12 @@ test.describe('Phase 2: Complete DAST Architecture Integration', () => {
       },
     };
 
-    const validation = await configManager.validateConfiguration(validConfig);
+    const validation = validateScanConfiguration(validConfig);
     expect(validation.valid).toBe(true);
     expect(validation.errors).toHaveLength(0);
 
-    await configManager.loadConfiguration(validConfig);
-    const loadedConfig = configManager.getConfiguration();
+    configManager.loadFromObject(validConfig);
+    const loadedConfig = configManager.getConfig();
     expect(loadedConfig).toBeDefined();
     expect(loadedConfig?.target.url).toBe('https://beta-squad-fe-production.up.railway.app/');
   });
@@ -141,7 +142,7 @@ test.describe('Phase 2: Complete DAST Architecture Integration', () => {
       },
     } as unknown as ScanConfiguration;
 
-    const validation = await configManager.validateConfiguration(invalidConfig);
+    const validation = validateScanConfiguration(invalidConfig);
     expect(validation.valid).toBe(false);
     expect(validation.errors.length).toBeGreaterThan(0);
   });
@@ -269,9 +270,13 @@ test.describe('Phase 2: Complete DAST Architecture Integration', () => {
     expect(result.duration).toBeGreaterThan(0);
 
     // Validate event sequence
-    expect(events).toContain(expect.stringMatching(/^scanStarted:/));
-    expect(events).toContain(`scannerStarted:${ScannerType.PASSIVE}`);
-    expect(events).toContain(expect.stringMatching(/^scanCompleted:completed:/));
+    const hasScanStarted = events.some(e => /^scanStarted:/.test(e));
+    const hasScannerStarted = events.includes(`scannerStarted:${ScannerType.PASSIVE}`);
+    const hasScanCompleted = events.some(e => /^scanCompleted:completed:/.test(e));
+
+    expect(hasScanStarted).toBe(true);
+    expect(hasScannerStarted).toBe(true);
+    expect(hasScanCompleted).toBe(true);
 
     // Validate results structure
     expect(result.summary).toBeDefined();
@@ -581,8 +586,8 @@ test.describe('Phase 2: Complete DAST Architecture Integration', () => {
 
     vulnsWithEvidence.forEach((vuln) => {
       expect(vuln.evidence).toBeDefined();
-      expect(vuln.evidence?.type).toBeDefined();
-      expect(vuln.evidence?.data).toBeDefined();
+      const hasDetails = !!vuln.evidence?.request || !!vuln.evidence?.response || !!vuln.evidence?.description;
+      expect(hasDetails).toBe(true);
     });
 
     console.log('\n=== Evidence Collection ===');
@@ -592,7 +597,6 @@ test.describe('Phase 2: Complete DAST Architecture Integration', () => {
     if (vulnsWithEvidence.length > 0) {
       const sample = vulnsWithEvidence[0];
       console.log(`\nSample Evidence (${sample.title}):`);
-      console.log(`  Type: ${sample.evidence?.type}`);
       console.log(`  Has Request Data: ${!!sample.evidence?.request}`);
       console.log(`  Has Response Data: ${!!sample.evidence?.response}`);
     }
