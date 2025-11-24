@@ -62,6 +62,7 @@ class SqlInjectionDetector {
         const results = await this.injector.injectMultiple(page, surface, payloads, {
             encoding: PayloadInjector_1.PayloadEncoding.NONE,
             submit: true,
+            baseUrl,
         });
         for (const result of results) {
             if (this.hasSqlError(result)) {
@@ -76,10 +77,12 @@ class SqlInjectionDetector {
         const trueResults = await this.injector.injectMultiple(page, surface, truePayloads, {
             encoding: PayloadInjector_1.PayloadEncoding.NONE,
             submit: true,
+            baseUrl,
         });
         const falseResults = await this.injector.injectMultiple(page, surface, falsePayloads, {
             encoding: PayloadInjector_1.PayloadEncoding.NONE,
             submit: true,
+            baseUrl,
         });
         const trueContent = trueResults.map((r) => r.response?.body?.length || 0);
         const falseContent = falseResults.map((r) => r.response?.body?.length || 0);
@@ -102,6 +105,7 @@ class SqlInjectionDetector {
             const result = await this.injector.inject(page, surface, payload, {
                 encoding: PayloadInjector_1.PayloadEncoding.NONE,
                 submit: true,
+                baseUrl,
             });
             const duration = Date.now() - startTime;
             if (duration > 4000) {
@@ -122,6 +126,7 @@ class SqlInjectionDetector {
         const results = await this.injector.injectMultiple(page, surface, unionPayloads, {
             encoding: PayloadInjector_1.PayloadEncoding.NONE,
             submit: true,
+            baseUrl,
         });
         for (const result of results) {
             if (result.response?.body?.includes('table_name') ||

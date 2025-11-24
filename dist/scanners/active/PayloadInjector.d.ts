@@ -37,6 +37,7 @@ export declare class PayloadInjector {
         encoding?: PayloadEncoding;
         strategy?: InjectionStrategy;
         submit?: boolean;
+        baseUrl?: string;
     }): Promise<InjectionResult>;
     injectMultiple(page: Page, surface: AttackSurface, payloads: string[], options?: {
         encoding?: PayloadEncoding;
@@ -44,6 +45,7 @@ export declare class PayloadInjector {
         strategy?: InjectionStrategy;
         submit?: boolean;
         delayMs?: number;
+        baseUrl?: string;
     }): Promise<InjectionResult[]>;
     protected encodePayload(payload: string, encoding: PayloadEncoding): string;
     private unicodeEncode;

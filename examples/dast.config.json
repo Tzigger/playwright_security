@@ -1,0 +1,54 @@
+{
+  "_comment": "Example Configuration File for DAST Scanning - save as: dast.config.json",
+  
+  "target": {
+    "url": "https://staging.myapp.com",
+    "crawlDepth": 2,
+    "maxPages": 20,
+    "timeout": 30000,
+    "scope": {
+      "include": ["https://staging\\.myapp\\.com/.*"],
+      "exclude": [
+        "https://staging\\.myapp\\.com/logout",
+        "https://staging\\.myapp\\.com/admin/.*"
+      ]
+    }
+  },
+  
+  "scanners": {
+    "passive": {
+      "enabled": false
+    },
+    "active": {
+      "enabled": true,
+      "aggressiveness": "medium",
+      "submitForms": true
+    }
+  },
+  
+  "detectors": {
+    "enabled": ["*"],
+    "sensitivity": "normal"
+  },
+  
+  "browser": {
+    "type": "chromium",
+    "headless": true,
+    "timeout": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  
+  "reporting": {
+    "formats": ["console", "json", "html", "sarif"],
+    "outputDir": "./reports",
+    "verbosity": "normal"
+  },
+  
+  "advanced": {
+    "parallelism": 2,
+    "logLevel": "info"
+  }
+}

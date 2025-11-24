@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SarifReporter = exports.HtmlReporter = exports.JsonReporter = exports.ConsoleReporter = exports.ConfigurationManager = exports.BrowserManager = exports.ScanEngine = void 0;
+exports.ErrorBasedDetector = exports.XssDetector = exports.SqlInjectionDetector = exports.ActiveScanner = exports.SarifReporter = exports.HtmlReporter = exports.JsonReporter = exports.ConsoleReporter = exports.ConfigurationManager = exports.BrowserManager = exports.ScanEngine = void 0;
 const tslib_1 = require("tslib");
 tslib_1.__exportStar(require("./types"), exports);
 tslib_1.__exportStar(require("./core/interfaces"), exports);
@@ -19,4 +19,13 @@ var HtmlReporter_1 = require("./reporters/HtmlReporter");
 Object.defineProperty(exports, "HtmlReporter", { enumerable: true, get: function () { return HtmlReporter_1.HtmlReporter; } });
 var SarifReporter_1 = require("./reporters/SarifReporter");
 Object.defineProperty(exports, "SarifReporter", { enumerable: true, get: function () { return SarifReporter_1.SarifReporter; } });
+tslib_1.__exportStar(require("./testing/helpers"), exports);
+var ActiveScanner_1 = require("./scanners/active/ActiveScanner");
+Object.defineProperty(exports, "ActiveScanner", { enumerable: true, get: function () { return ActiveScanner_1.ActiveScanner; } });
+var SqlInjectionDetector_1 = require("./detectors/active/SqlInjectionDetector");
+Object.defineProperty(exports, "SqlInjectionDetector", { enumerable: true, get: function () { return SqlInjectionDetector_1.SqlInjectionDetector; } });
+var XssDetector_1 = require("./detectors/active/XssDetector");
+Object.defineProperty(exports, "XssDetector", { enumerable: true, get: function () { return XssDetector_1.XssDetector; } });
+var ErrorBasedDetector_1 = require("./detectors/active/ErrorBasedDetector");
+Object.defineProperty(exports, "ErrorBasedDetector", { enumerable: true, get: function () { return ErrorBasedDetector_1.ErrorBasedDetector; } });
 //# sourceMappingURL=index.js.map

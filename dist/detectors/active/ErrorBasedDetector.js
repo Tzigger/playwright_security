@@ -29,6 +29,7 @@ class ErrorBasedDetector {
                     const result = await this.injector.inject(page, surface, payload, {
                         encoding: PayloadInjector_1.PayloadEncoding.NONE,
                         submit: true,
+                        baseUrl,
                     });
                     const errorVulns = await this.analyzeInjectionResult(result);
                     if (errorVulns.length > 0) {

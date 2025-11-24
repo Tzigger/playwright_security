@@ -1,0 +1,26 @@
+# Exclude from NPM package
+node_modules/
+src/
+tests/
+examples/
+*.test.ts
+*.spec.ts
+.github/
+.vscode/
+.git/
+.gitignore
+.eslintrc.js
+.prettierrc
+tsconfig.json
+jest.config.js
+playwright.config.ts
+coverage/
+.DS_Store
+*.log
+*.tgz
+
+# Include in package
+!dist/
+!README.md
+!LICENSE
+!package.json

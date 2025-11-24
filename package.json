@@ -1,12 +1,18 @@
 {
-  "name": "playwright_security",
-  "version": "0.1.0",
-  "description": "Automated DAST (Dynamic Application Security Testing) Engine using Playwright",
+  "name": "@tzigger/playwright-security",
+  "version": "0.1.0-beta.1",
+  "description": "Automated DAST (Dynamic Application Security Testing) framework built on Playwright for security testing and vulnerability detection",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "dast-scan": "dist/cli/index.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -37,16 +43,31 @@
     "penetration-testing",
     "xss",
     "sql-injection",
-    "security-audit"
+    "security-audit",
+    "security-testing",
+    "web-security",
+    "appsec",
+    "devsecops",
+    "owasp",
+    "sarif"
   ],
-  "author": "",
+  "author": "Tzigger",
   "license": "MIT",
+  "homepage": "https://github.com/Tzigger/playwright_security#readme",
+  "bugs": {
+    "url": "https://github.com/Tzigger/playwright_security/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Tzigger/playwright_security.git"
+    "url": "git+https://github.com/Tzigger/playwright_security.git"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

@@ -27,9 +27,21 @@ class XssDetector {
             surface.context === DomExplorer_1.InjectionContext.URL);
         for (const surface of xssTargets) {
             try {
-                const reflectedVuln = await this.testReflectedXss(page, surface, baseUrl);
-                if (reflectedVuln)
-                    vulnerabilities.push(reflectedVuln);
+                if (surface.type === DomExplorer_1.AttackSurfaceType.URL_PARAMETER) {
+                    const htmlContextSurface = { ...surface, context: DomExplorer_1.InjectionContext.HTML };
+                    const reflectedHtml = await this.testReflectedXss(page, htmlContextSurface, baseUrl);
+                    if (reflectedHtml)
+                        vulnerabilities.push(reflectedHtml);
+                    const attrContextSurface = { ...surface, context: DomExplorer_1.InjectionContext.HTML_ATTRIBUTE };
+                    const reflectedAttr = await this.testReflectedXss(page, attrContextSurface, baseUrl);
+                    if (reflectedAttr)
+                        vulnerabilities.push(reflectedAttr);
+                }
+                else {
+                    const reflectedVuln = await this.testReflectedXss(page, surface, baseUrl);
+                    if (reflectedVuln)
+                        vulnerabilities.push(reflectedVuln);
+                }
                 if (surface.metadata?.formAction) {
                     const storedVuln = await this.testStoredXss(page, surface, baseUrl);
                     if (storedVuln)
@@ -52,6 +64,7 @@ class XssDetector {
                 const result = await this.injector.inject(page, surface, payload, {
                     encoding: PayloadInjector_1.PayloadEncoding.NONE,
                     submit: true,
+                    baseUrl,
                 });
                 if (this.isPayloadExecuted(result, payload)) {
                     return this.createVulnerability(surface, result, XssType.REFLECTED, baseUrl, payload);
@@ -69,6 +82,7 @@ class XssDetector {
             const result = await this.injector.inject(page, surface, storedPayload, {
                 encoding: PayloadInjector_1.PayloadEncoding.NONE,
                 submit: true,
+                baseUrl,
             });
             await page.waitForTimeout(1000);
             await page.reload();

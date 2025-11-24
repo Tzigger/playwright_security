@@ -8,4 +8,9 @@ export { ConsoleReporter } from './reporters/ConsoleReporter';
 export { JsonReporter } from './reporters/JsonReporter';
 export { HtmlReporter } from './reporters/HtmlReporter';
 export { SarifReporter } from './reporters/SarifReporter';
+export * from './testing/helpers';
+export { ActiveScanner } from './scanners/active/ActiveScanner';
+export { SqlInjectionDetector } from './detectors/active/SqlInjectionDetector';
+export { XssDetector } from './detectors/active/XssDetector';
+export { ErrorBasedDetector } from './detectors/active/ErrorBasedDetector';
 //# sourceMappingURL=index.d.ts.map

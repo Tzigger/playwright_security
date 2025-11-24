@@ -30,6 +30,17 @@ class PayloadInjector {
         const strategy = options.strategy || InjectionStrategy.REPLACE;
         const submit = options.submit !== undefined ? options.submit : true;
         this.logger.debug(`Injecting payload into ${surface.name} (${surface.type})`);
+        if (options.baseUrl) {
+            try {
+                const currentUrl = page.url();
+                if (surface.type === DomExplorer_1.AttackSurfaceType.FORM_INPUT || currentUrl !== options.baseUrl) {
+                    await page.goto(options.baseUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+                }
+            }
+            catch (error) {
+                this.logger.warn(`Failed to restore state to ${options.baseUrl}: ${error}`);
+            }
+        }
         const result = {
             payload,
             encoding,
@@ -142,10 +153,10 @@ class PayloadInjector {
     }
     async injectIntoFormInput(page, surface, payload, submit) {
         if (surface.selector) {
-            await page.fill(surface.selector, payload, { timeout: 1000 });
+            await page.fill(surface.selector, payload);
         }
         else if (surface.element) {
-            await surface.element.fill(payload, { timeout: 1000 });
+            await surface.element.fill(payload);
         }
         else {
             throw new Error('No element or selector available for injection');
