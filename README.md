@@ -46,16 +46,56 @@ A powerful, modular, and extensible security testing framework that combines **p
 
 ## 🚀 Quick Start
 
-### Installation
+### For Framework Users
+
+Install the framework in your project:
 
 ```bash
+npm install @tzigger/playwright-security --save-dev
+```
+
+Use in your Playwright tests:
+
+```typescript
+import { test } from '@playwright/test';
+import { runSecurityScan, assertNoVulnerabilities } from '@tzigger/playwright-security/testing';
+
+test('login page security', async ({ page }) => {
+  await page.goto('https://myapp.com/login');
+  
+  const vulnerabilities = await runSecurityScan(page.url(), {
+    detectors: 'all',
+    maxPages: 1
+  });
+  
+  assertNoVulnerabilities(vulnerabilities);
+});
+```
+
+📖 **See [Developer Guide](./docs/DEVELOPER-GUIDE.md) for complete usage documentation**
+
+---
+
+### For Framework Development
+
+Clone and setup the repository:
+
+```bash
+git clone https://github.com/Tzigger/playwright_security.git
+cd playwright_security
 npm install
 ```
 
-### Basic Usage
+Run development commands:
 
 ```bash
-# Run a basic scan
+# Build the project
+npm run build
+
+# Run tests
+npm test
+
+# Run a development scan
 npm run dev -- scan --url https://example.com
 
 # Use a configuration file
@@ -263,9 +303,13 @@ npm run format:check
 
 ## 📚 Documentation
 
+### For Users
+- [Developer Guide](./docs/DEVELOPER-GUIDE.md) - **Complete guide for using the framework in your projects**
+- [API Quick Reference](./docs/API-QUICK-REFERENCE.md) - Quick reference for all APIs and methods
+
+### For Contributors
 - [Architecture](./docs/architecture.md) - System design and patterns
 - [Plugin Development](./docs/plugin-development.md) - Creating custom plugins
-- [API Reference](./docs/api-reference.md) - Full API documentation
 
 ## 🤝 Contributing
 
