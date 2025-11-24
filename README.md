@@ -335,4 +335,4 @@ For issues and questions, please use the GitHub issue tracker.
 
 ---
 
-**Built with ❤️ using TypeScript and Playwright**
+
