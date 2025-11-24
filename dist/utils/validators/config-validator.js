@@ -1,4 +1,13 @@
-export function validateScanConfiguration(config) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.validateScanConfiguration = validateScanConfiguration;
+exports.isValidUrl = isValidUrl;
+exports.isValidRegex = isValidRegex;
+exports.isValidPath = isValidPath;
+exports.isValidEmail = isValidEmail;
+exports.isValidPort = isValidPort;
+exports.isValidConfidence = isValidConfidence;
+function validateScanConfiguration(config) {
     const errors = [];
     if (!config.target?.url) {
         errors.push('Target URL is required');
@@ -32,7 +41,7 @@ export function validateScanConfiguration(config) {
         errors,
     };
 }
-export function isValidUrl(url) {
+function isValidUrl(url) {
     try {
         const parsed = new URL(url);
         return ['http:', 'https:'].includes(parsed.protocol);
@@ -41,7 +50,7 @@ export function isValidUrl(url) {
         return false;
     }
 }
-export function isValidRegex(pattern) {
+function isValidRegex(pattern) {
     try {
         new RegExp(pattern);
         return true;
@@ -50,21 +59,21 @@ export function isValidRegex(pattern) {
         return false;
     }
 }
-export function isValidPath(path) {
+function isValidPath(path) {
     if (path.includes('\0'))
         return false;
     if (path.trim().length === 0)
         return false;
     return true;
 }
-export function isValidEmail(email) {
+function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 }
-export function isValidPort(port) {
+function isValidPort(port) {
     return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
-export function isValidConfidence(confidence) {
+function isValidConfidence(confidence) {
     return typeof confidence === 'number' && confidence >= 0 && confidence <= 1;
 }
 //# sourceMappingURL=config-validator.js.map

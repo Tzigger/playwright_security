@@ -1,7 +1,10 @@
-import { chromium, firefox, webkit } from 'playwright';
-import { BrowserType, LogLevel } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-export class BrowserManager {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BrowserManager = void 0;
+const playwright_1 = require("playwright");
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+class BrowserManager {
     static instance;
     browser = null;
     contexts = new Map();
@@ -9,7 +12,7 @@ export class BrowserManager {
     config = null;
     isInitialized = false;
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'BrowserManager');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'BrowserManager');
     }
     static getInstance() {
         if (!BrowserManager.instance) {
@@ -31,14 +34,14 @@ export class BrowserManager {
                 args: config.args,
             };
             switch (config.type) {
-                case BrowserType.CHROMIUM:
-                    this.browser = await chromium.launch(launchOptions);
+                case enums_1.BrowserType.CHROMIUM:
+                    this.browser = await playwright_1.chromium.launch(launchOptions);
                     break;
-                case BrowserType.FIREFOX:
-                    this.browser = await firefox.launch(launchOptions);
+                case enums_1.BrowserType.FIREFOX:
+                    this.browser = await playwright_1.firefox.launch(launchOptions);
                     break;
-                case BrowserType.WEBKIT:
-                    this.browser = await webkit.launch(launchOptions);
+                case enums_1.BrowserType.WEBKIT:
+                    this.browser = await playwright_1.webkit.launch(launchOptions);
                     break;
                 default:
                     throw new Error(`Unsupported browser type: ${config.type}`);
@@ -155,4 +158,5 @@ export class BrowserManager {
         this.logger.setLevel(level);
     }
 }
+exports.BrowserManager = BrowserManager;
 //# sourceMappingURL=BrowserManager.js.map

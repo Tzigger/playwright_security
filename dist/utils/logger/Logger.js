@@ -1,8 +1,12 @@
-import { LogLevel } from '../../types/enums';
-export class Logger {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.globalLogger = exports.Logger = void 0;
+exports.createLogger = createLogger;
+const enums_1 = require("../../types/enums");
+class Logger {
     level;
     prefix;
-    constructor(level = LogLevel.INFO, prefix = '') {
+    constructor(level = enums_1.LogLevel.INFO, prefix = '') {
         this.level = level;
         this.prefix = prefix;
     }
@@ -13,21 +17,21 @@ export class Logger {
         return this.level;
     }
     error(message, ...args) {
-        this.log(LogLevel.ERROR, message, ...args);
+        this.log(enums_1.LogLevel.ERROR, message, ...args);
     }
     warn(message, ...args) {
-        if (this.shouldLog(LogLevel.WARN)) {
-            this.log(LogLevel.WARN, message, ...args);
+        if (this.shouldLog(enums_1.LogLevel.WARN)) {
+            this.log(enums_1.LogLevel.WARN, message, ...args);
         }
     }
     info(message, ...args) {
-        if (this.shouldLog(LogLevel.INFO)) {
-            this.log(LogLevel.INFO, message, ...args);
+        if (this.shouldLog(enums_1.LogLevel.INFO)) {
+            this.log(enums_1.LogLevel.INFO, message, ...args);
         }
     }
     debug(message, ...args) {
-        if (this.shouldLog(LogLevel.DEBUG)) {
-            this.log(LogLevel.DEBUG, message, ...args);
+        if (this.shouldLog(enums_1.LogLevel.DEBUG)) {
+            this.log(enums_1.LogLevel.DEBUG, message, ...args);
         }
     }
     child(prefix) {
@@ -40,10 +44,10 @@ export class Logger {
         const prefixStr = this.prefix ? `[${this.prefix}] ` : '';
         const formattedMessage = `${timestamp} ${levelStr} ${prefixStr}${message}`;
         switch (level) {
-            case LogLevel.ERROR:
+            case enums_1.LogLevel.ERROR:
                 console.error(formattedMessage, ...args);
                 break;
-            case LogLevel.WARN:
+            case enums_1.LogLevel.WARN:
                 console.warn(formattedMessage, ...args);
                 break;
             default:
@@ -51,14 +55,15 @@ export class Logger {
         }
     }
     shouldLog(messageLevel) {
-        const levels = [LogLevel.ERROR, LogLevel.WARN, LogLevel.INFO, LogLevel.DEBUG];
+        const levels = [enums_1.LogLevel.ERROR, enums_1.LogLevel.WARN, enums_1.LogLevel.INFO, enums_1.LogLevel.DEBUG];
         const currentLevelIndex = levels.indexOf(this.level);
         const messageLevelIndex = levels.indexOf(messageLevel);
         return messageLevelIndex <= currentLevelIndex;
     }
 }
-export const globalLogger = new Logger(LogLevel.INFO);
-export function createLogger(level = LogLevel.INFO, prefix = '') {
+exports.Logger = Logger;
+exports.globalLogger = new Logger(enums_1.LogLevel.INFO);
+function createLogger(level = enums_1.LogLevel.INFO, prefix = '') {
     return new Logger(level, prefix);
 }
 //# sourceMappingURL=Logger.js.map

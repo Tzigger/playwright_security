@@ -1,7 +1,10 @@
-import { Logger } from '../../utils/logger/Logger';
-import { LogLevel, HttpMethod } from '../../types/enums';
-import { EventEmitter } from 'events';
-export class NetworkInterceptor extends EventEmitter {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NetworkInterceptor = void 0;
+const Logger_1 = require("../../utils/logger/Logger");
+const enums_1 = require("../../types/enums");
+const events_1 = require("events");
+class NetworkInterceptor extends events_1.EventEmitter {
     logger;
     config;
     requestMap = new Map();
@@ -10,7 +13,7 @@ export class NetworkInterceptor extends EventEmitter {
     requestIdCounter = 0;
     constructor(config = {}) {
         super();
-        this.logger = new Logger(LogLevel.DEBUG, 'NetworkInterceptor');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.DEBUG, 'NetworkInterceptor');
         this.config = {
             captureRequestBody: true,
             captureResponseBody: true,
@@ -160,10 +163,10 @@ export class NetworkInterceptor extends EventEmitter {
     }
     mapHttpMethod(method) {
         const upperMethod = method.toUpperCase();
-        if (Object.values(HttpMethod).includes(upperMethod)) {
+        if (Object.values(enums_1.HttpMethod).includes(upperMethod)) {
             return upperMethod;
         }
-        return HttpMethod.GET;
+        return enums_1.HttpMethod.GET;
     }
     generateRequestId() {
         return `req_${++this.requestIdCounter}_${Date.now()}`;
@@ -187,4 +190,5 @@ export class NetworkInterceptor extends EventEmitter {
         this.logger.setLevel(level);
     }
 }
+exports.NetworkInterceptor = NetworkInterceptor;
 //# sourceMappingURL=NetworkInterceptor.js.map

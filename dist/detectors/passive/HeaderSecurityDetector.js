@@ -1,61 +1,64 @@
-import { VulnerabilityCategory, VulnerabilitySeverity, LogLevel } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-import { mapVulnerabilityToCWE } from '../../utils/cwe/cwe-mapping';
-import { v4 as uuidv4 } from 'uuid';
-export class HeaderSecurityDetector {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.HeaderSecurityDetector = void 0;
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+const cwe_mapping_1 = require("../../utils/cwe/cwe-mapping");
+const uuid_1 = require("uuid");
+class HeaderSecurityDetector {
     logger;
     securityHeaders = [];
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'HeaderSecurityDetector');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'HeaderSecurityDetector');
         this.initializeSecurityHeaders();
     }
     initializeSecurityHeaders() {
         this.securityHeaders = [
             {
                 name: 'strict-transport-security',
-                severity: VulnerabilitySeverity.HIGH,
+                severity: enums_1.VulnerabilitySeverity.HIGH,
                 description: 'HSTS header missing - connections may be downgraded to HTTP',
                 remediation: 'Add Strict-Transport-Security header with: max-age=31536000; includeSubDomains; preload',
                 cwe: 'CWE-319',
             },
             {
                 name: 'content-security-policy',
-                severity: VulnerabilitySeverity.HIGH,
+                severity: enums_1.VulnerabilitySeverity.HIGH,
                 description: 'CSP header missing - vulnerable to XSS and injection attacks',
                 remediation: "Implement Content-Security-Policy header to control resource loading. Start with: default-src 'self'",
                 cwe: 'CWE-79',
             },
             {
                 name: 'x-frame-options',
-                severity: VulnerabilitySeverity.MEDIUM,
+                severity: enums_1.VulnerabilitySeverity.MEDIUM,
                 description: 'X-Frame-Options header missing - vulnerable to clickjacking attacks',
                 remediation: "Add X-Frame-Options header with: DENY or SAMEORIGIN",
                 cwe: 'CWE-1021',
             },
             {
                 name: 'x-content-type-options',
-                severity: VulnerabilitySeverity.MEDIUM,
+                severity: enums_1.VulnerabilitySeverity.MEDIUM,
                 description: 'X-Content-Type-Options header missing - vulnerable to MIME type sniffing',
                 remediation: 'Add X-Content-Type-Options header with: nosniff',
                 cwe: 'CWE-16',
             },
             {
                 name: 'x-xss-protection',
-                severity: VulnerabilitySeverity.LOW,
+                severity: enums_1.VulnerabilitySeverity.LOW,
                 description: 'X-XSS-Protection header missing or misconfigured',
                 remediation: 'Add X-XSS-Protection header with: 1; mode=block',
                 cwe: 'CWE-79',
             },
             {
                 name: 'referrer-policy',
-                severity: VulnerabilitySeverity.LOW,
+                severity: enums_1.VulnerabilitySeverity.LOW,
                 description: 'Referrer-Policy header missing - may leak sensitive information in referrer',
                 remediation: 'Add Referrer-Policy header with: strict-origin-when-cross-origin or no-referrer',
                 cwe: 'CWE-200',
             },
             {
                 name: 'permissions-policy',
-                severity: VulnerabilitySeverity.LOW,
+                severity: enums_1.VulnerabilitySeverity.LOW,
                 description: 'Permissions-Policy header missing - browser features not restricted',
                 remediation: 'Add Permissions-Policy header to control browser features: geolocation=(), microphone=(), camera=()',
                 cwe: 'CWE-16',
@@ -107,11 +110,11 @@ export class HeaderSecurityDetector {
                     if (!hasCSRFToken) {
                         const action = await form.getAttribute('action') || 'unknown';
                         vulnerabilities.push({
-                            id: uuidv4(),
+                            id: (0, uuid_1.v4)(),
                             title: 'Absence of Anti-CSRF Tokens',
                             description: `Form with POST method missing CSRF token protection. Action: ${action}`,
-                            severity: VulnerabilitySeverity.MEDIUM,
-                            category: VulnerabilityCategory.CSRF,
+                            severity: enums_1.VulnerabilitySeverity.MEDIUM,
+                            category: enums_1.VulnerabilityCategory.CSRF,
                             cwe: 'CWE-352',
                             owasp: 'A01:2025',
                             url: page.url(),
@@ -148,11 +151,11 @@ export class HeaderSecurityDetector {
         const acac = headers['access-control-allow-credentials'];
         if (acao === '*' && acac === 'true') {
             vulnerabilities.push({
-                id: uuidv4(),
+                id: (0, uuid_1.v4)(),
                 title: 'Cross-Domain Misconfiguration',
                 description: 'CORS configured to allow any origin (*) with credentials enabled',
-                severity: VulnerabilitySeverity.HIGH,
-                category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+                severity: enums_1.VulnerabilitySeverity.HIGH,
+                category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
                 cwe: 'CWE-942',
                 owasp: 'A02:2025',
                 url: response.url,
@@ -174,11 +177,11 @@ export class HeaderSecurityDetector {
         }
         else if (acao && acao !== response.url && !acao.includes(new URL(response.url).hostname)) {
             vulnerabilities.push({
-                id: uuidv4(),
+                id: (0, uuid_1.v4)(),
                 title: 'Cross-Domain Misconfiguration',
                 description: `CORS allows requests from different origin: ${acao}`,
-                severity: VulnerabilitySeverity.MEDIUM,
-                category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+                severity: enums_1.VulnerabilitySeverity.MEDIUM,
+                category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
                 cwe: 'CWE-942',
                 owasp: 'A02:2025',
                 url: response.url,
@@ -213,11 +216,11 @@ export class HeaderSecurityDetector {
                 const scriptUrl = new URL(scriptSrc, response.url);
                 if (scriptUrl.hostname !== currentDomain && !scriptUrl.hostname.includes('localhost')) {
                     vulnerabilities.push({
-                        id: uuidv4(),
+                        id: (0, uuid_1.v4)(),
                         title: 'Cross-Domain JavaScript Source File Inclusion',
                         description: `JavaScript loaded from external domain: ${scriptUrl.hostname}`,
-                        severity: VulnerabilitySeverity.LOW,
-                        category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+                        severity: enums_1.VulnerabilitySeverity.LOW,
+                        category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
                         cwe: 'CWE-829',
                         owasp: 'A03:2025',
                         url: response.url,
@@ -255,11 +258,11 @@ export class HeaderSecurityDetector {
                 const majorMinor = version.substring(0, 3);
                 if (lib.versions.includes(majorMinor)) {
                     vulnerabilities.push({
-                        id: uuidv4(),
+                        id: (0, uuid_1.v4)(),
                         title: 'Vulnerable JS Library',
                         description: `Outdated ${lib.name} version ${version} detected with known vulnerabilities`,
-                        severity: VulnerabilitySeverity.MEDIUM,
-                        category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+                        severity: enums_1.VulnerabilitySeverity.MEDIUM,
+                        category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
                         cwe: 'CWE-829',
                         owasp: 'A03:2025',
                         url: response.url,
@@ -293,11 +296,11 @@ export class HeaderSecurityDetector {
             const matches = body.matchAll(pattern);
             for (const match of matches) {
                 vulnerabilities.push({
-                    id: uuidv4(),
+                    id: (0, uuid_1.v4)(),
                     title: 'Information Disclosure - Suspicious Comments',
                     description: `${type} found in source code: ${match[0].substring(0, 100)}...`,
-                    severity: VulnerabilitySeverity.INFO,
-                    category: VulnerabilityCategory.INFORMATION_DISCLOSURE,
+                    severity: enums_1.VulnerabilitySeverity.INFO,
+                    category: enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE,
                     cwe: 'CWE-615',
                     owasp: 'A02:2025',
                     url: response.url,
@@ -332,11 +335,11 @@ export class HeaderSecurityDetector {
         ];
         if (headers['server'] && /nginx/i.test(headers['server'])) {
             vulnerabilities.push({
-                id: uuidv4(),
+                id: (0, uuid_1.v4)(),
                 title: 'Tech Detected - Nginx',
                 description: 'Nginx web server detected',
-                severity: VulnerabilitySeverity.INFO,
-                category: VulnerabilityCategory.INFORMATION_DISCLOSURE,
+                severity: enums_1.VulnerabilitySeverity.INFO,
+                category: enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE,
                 cwe: 'CWE-200',
                 owasp: 'A02:2025',
                 url: response.url,
@@ -356,11 +359,11 @@ export class HeaderSecurityDetector {
         for (const tech of technologies) {
             if (tech.pattern.test(body)) {
                 vulnerabilities.push({
-                    id: uuidv4(),
+                    id: (0, uuid_1.v4)(),
                     title: `Tech Detected - ${tech.name}`,
                     description: `${tech.name} technology detected in application`,
-                    severity: VulnerabilitySeverity.INFO,
-                    category: VulnerabilityCategory.INFORMATION_DISCLOSURE,
+                    severity: enums_1.VulnerabilitySeverity.INFO,
+                    category: enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE,
                     cwe: 'CWE-200',
                     owasp: 'A02:2025',
                     url: response.url,
@@ -386,8 +389,8 @@ export class HeaderSecurityDetector {
         for (const secHeader of this.securityHeaders) {
             if (!headers.has(secHeader.name)) {
                 const vulnerability = {
-                    id: uuidv4(),
-                    category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+                    id: (0, uuid_1.v4)(),
+                    category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
                     severity: secHeader.severity,
                     title: `Missing Security Header: ${this.formatHeaderName(secHeader.name)}`,
                     description: secHeader.description,
@@ -409,7 +412,7 @@ export class HeaderSecurityDetector {
                     owasp: 'A05:2021 - Security Misconfiguration',
                     timestamp: Date.now(),
                 };
-                vulnerabilities.push(mapVulnerabilityToCWE(vulnerability));
+                vulnerabilities.push((0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability));
             }
         }
         return vulnerabilities;
@@ -423,35 +426,35 @@ export class HeaderSecurityDetector {
             if (maxAgeMatch && maxAgeMatch[1]) {
                 const maxAge = parseInt(maxAgeMatch[1]);
                 if (maxAge < 31536000) {
-                    vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Weak HSTS Configuration', `HSTS max-age is too short (${maxAge} seconds). Recommended: 31536000 (1 year)`, 'Increase HSTS max-age to at least 31536000 seconds and include subdomains', VulnerabilitySeverity.MEDIUM, 'CWE-16'));
+                    vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Weak HSTS Configuration', `HSTS max-age is too short (${maxAge} seconds). Recommended: 31536000 (1 year)`, 'Increase HSTS max-age to at least 31536000 seconds and include subdomains', enums_1.VulnerabilitySeverity.MEDIUM, 'CWE-16'));
                 }
             }
             if (!hstsValue.includes('includeSubDomains')) {
-                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'HSTS Without includeSubDomains', 'HSTS header does not include subdomains, leaving them vulnerable', 'Add includeSubDomains directive to HSTS header', VulnerabilitySeverity.LOW, 'CWE-16'));
+                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'HSTS Without includeSubDomains', 'HSTS header does not include subdomains, leaving them vulnerable', 'Add includeSubDomains directive to HSTS header', enums_1.VulnerabilitySeverity.LOW, 'CWE-16'));
             }
         }
         if (headers.has('content-security-policy')) {
             const cspValue = headers.get('content-security-policy');
             if (cspValue.includes("'unsafe-inline'") || cspValue.includes("'unsafe-eval'")) {
-                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Weak CSP Configuration', "CSP contains 'unsafe-inline' or 'unsafe-eval', reducing protection against XSS", "Remove 'unsafe-inline' and 'unsafe-eval' from CSP. Use nonces or hashes for inline scripts", VulnerabilitySeverity.MEDIUM, 'CWE-79'));
+                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Weak CSP Configuration', "CSP contains 'unsafe-inline' or 'unsafe-eval', reducing protection against XSS", "Remove 'unsafe-inline' and 'unsafe-eval' from CSP. Use nonces or hashes for inline scripts", enums_1.VulnerabilitySeverity.MEDIUM, 'CWE-79'));
             }
         }
         if (headers.has('server')) {
             const serverValue = headers.get('server');
             if (serverValue && !serverValue.toLowerCase().includes('hidden')) {
-                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Server Version Disclosure', `Server header exposes server information: ${serverValue}`, 'Remove or obfuscate Server header to prevent information disclosure', VulnerabilitySeverity.LOW, 'CWE-200'));
+                vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Server Version Disclosure', `Server header exposes server information: ${serverValue}`, 'Remove or obfuscate Server header to prevent information disclosure', enums_1.VulnerabilitySeverity.LOW, 'CWE-200'));
             }
         }
         if (headers.has('x-powered-by')) {
             const poweredBy = headers.get('x-powered-by');
-            vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Technology Stack Disclosure', `X-Powered-By header exposes technology: ${poweredBy}`, 'Remove X-Powered-By header to prevent information disclosure', VulnerabilitySeverity.LOW, 'CWE-200'));
+            vulnerabilities.push(this.createMisconfigurationVulnerability(response, 'Technology Stack Disclosure', `X-Powered-By header exposes technology: ${poweredBy}`, 'Remove X-Powered-By header to prevent information disclosure', enums_1.VulnerabilitySeverity.LOW, 'CWE-200'));
         }
         return vulnerabilities;
     }
     createMisconfigurationVulnerability(response, title, description, remediation, severity, cwe) {
         const vulnerability = {
-            id: uuidv4(),
-            category: VulnerabilityCategory.SECURITY_MISCONFIGURATION,
+            id: (0, uuid_1.v4)(),
+            category: enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION,
             severity,
             title,
             description,
@@ -470,7 +473,7 @@ export class HeaderSecurityDetector {
             owasp: 'A05:2021 - Security Misconfiguration',
             timestamp: Date.now(),
         };
-        return mapVulnerabilityToCWE(vulnerability);
+        return (0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability);
     }
     normalizeHeaders(headers) {
         const normalized = new Map();
@@ -492,4 +495,5 @@ export class HeaderSecurityDetector {
         return [];
     }
 }
+exports.HeaderSecurityDetector = HeaderSecurityDetector;
 //# sourceMappingURL=HeaderSecurityDetector.js.map

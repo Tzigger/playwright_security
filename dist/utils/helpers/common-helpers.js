@@ -1,14 +1,28 @@
-export function generateUUID() {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateUUID = generateUUID;
+exports.generateShortId = generateShortId;
+exports.hashString = hashString;
+exports.encodeBase64 = encodeBase64;
+exports.decodeBase64 = decodeBase64;
+exports.sanitizeFilename = sanitizeFilename;
+exports.truncate = truncate;
+exports.deepClone = deepClone;
+exports.sleep = sleep;
+exports.retry = retry;
+exports.formatBytes = formatBytes;
+exports.isEmpty = isEmpty;
+function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
         const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
     });
 }
-export function generateShortId() {
+function generateShortId() {
     return Math.random().toString(36).substring(2, 11);
 }
-export function hashString(str) {
+function hashString(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
@@ -17,28 +31,28 @@ export function hashString(str) {
     }
     return Math.abs(hash).toString(36);
 }
-export function encodeBase64(str) {
+function encodeBase64(str) {
     return Buffer.from(str).toString('base64');
 }
-export function decodeBase64(str) {
+function decodeBase64(str) {
     return Buffer.from(str, 'base64').toString('utf-8');
 }
-export function sanitizeFilename(filename) {
+function sanitizeFilename(filename) {
     return filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 }
-export function truncate(str, maxLength) {
+function truncate(str, maxLength) {
     if (str.length <= maxLength) {
         return str;
     }
     return str.substring(0, maxLength - 3) + '...';
 }
-export function deepClone(obj) {
+function deepClone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
-export function sleep(ms) {
+function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-export async function retry(fn, maxRetries = 3, delayMs = 1000) {
+async function retry(fn, maxRetries = 3, delayMs = 1000) {
     let lastError;
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -53,7 +67,7 @@ export async function retry(fn, maxRetries = 3, delayMs = 1000) {
     }
     throw lastError;
 }
-export function formatBytes(bytes) {
+function formatBytes(bytes) {
     if (bytes === 0)
         return '0 Bytes';
     const k = 1024;
@@ -61,7 +75,7 @@ export function formatBytes(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
-export function isEmpty(obj) {
+function isEmpty(obj) {
     if (obj === null || obj === undefined)
         return true;
     if (typeof obj === 'string')

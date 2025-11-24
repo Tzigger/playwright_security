@@ -1,5 +1,13 @@
-import { VulnerabilityCategory } from '../../types/enums';
-export const CWE_MAPPING = {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CATEGORY_TO_CWE = exports.CWE_MAPPING = void 0;
+exports.getCWEInfo = getCWEInfo;
+exports.getCWEsForCategory = getCWEsForCategory;
+exports.getPrimaryCWE = getPrimaryCWE;
+exports.mapVulnerabilityToCWE = mapVulnerabilityToCWE;
+exports.getCWEInfoForCategory = getCWEInfoForCategory;
+const enums_1 = require("../../types/enums");
+exports.CWE_MAPPING = {
     'CWE-89': {
         id: 'CWE-89',
         name: 'SQL Injection',
@@ -139,40 +147,40 @@ export const CWE_MAPPING = {
         references: ['https://cwe.mitre.org/data/definitions/532.html'],
     },
 };
-export const CATEGORY_TO_CWE = {
-    [VulnerabilityCategory.INJECTION]: ['CWE-89', 'CWE-78', 'CWE-90'],
-    [VulnerabilityCategory.XSS]: ['CWE-79', 'CWE-80', 'CWE-82'],
-    [VulnerabilityCategory.DATA_EXPOSURE]: ['CWE-200', 'CWE-359', 'CWE-532', 'CWE-209'],
-    [VulnerabilityCategory.INSECURE_TRANSMISSION]: ['CWE-319', 'CWE-598', 'CWE-523'],
-    [VulnerabilityCategory.AUTHENTICATION]: ['CWE-798'],
-    [VulnerabilityCategory.AUTHORIZATION]: [],
-    [VulnerabilityCategory.CONFIGURATION]: ['CWE-16'],
-    [VulnerabilityCategory.CRYPTOGRAPHY]: ['CWE-327'],
-    [VulnerabilityCategory.CSRF]: ['CWE-352'],
-    [VulnerabilityCategory.CLICKJACKING]: ['CWE-1021'],
-    [VulnerabilityCategory.SECURITY_HEADERS]: ['CWE-16', 'CWE-523', 'CWE-1021'],
-    [VulnerabilityCategory.INFORMATION_DISCLOSURE]: ['CWE-200', 'CWE-209', 'CWE-532'],
-    [VulnerabilityCategory.INSECURE_COMMUNICATION]: ['CWE-319', 'CWE-523'],
-    [VulnerabilityCategory.BROKEN_AUTHENTICATION]: ['CWE-287', 'CWE-798'],
-    [VulnerabilityCategory.SECURITY_MISCONFIGURATION]: ['CWE-16', 'CWE-2'],
+exports.CATEGORY_TO_CWE = {
+    [enums_1.VulnerabilityCategory.INJECTION]: ['CWE-89', 'CWE-78', 'CWE-90'],
+    [enums_1.VulnerabilityCategory.XSS]: ['CWE-79', 'CWE-80', 'CWE-82'],
+    [enums_1.VulnerabilityCategory.DATA_EXPOSURE]: ['CWE-200', 'CWE-359', 'CWE-532', 'CWE-209'],
+    [enums_1.VulnerabilityCategory.INSECURE_TRANSMISSION]: ['CWE-319', 'CWE-598', 'CWE-523'],
+    [enums_1.VulnerabilityCategory.AUTHENTICATION]: ['CWE-798'],
+    [enums_1.VulnerabilityCategory.AUTHORIZATION]: [],
+    [enums_1.VulnerabilityCategory.CONFIGURATION]: ['CWE-16'],
+    [enums_1.VulnerabilityCategory.CRYPTOGRAPHY]: ['CWE-327'],
+    [enums_1.VulnerabilityCategory.CSRF]: ['CWE-352'],
+    [enums_1.VulnerabilityCategory.CLICKJACKING]: ['CWE-1021'],
+    [enums_1.VulnerabilityCategory.SECURITY_HEADERS]: ['CWE-16', 'CWE-523', 'CWE-1021'],
+    [enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE]: ['CWE-200', 'CWE-209', 'CWE-532'],
+    [enums_1.VulnerabilityCategory.INSECURE_COMMUNICATION]: ['CWE-319', 'CWE-523'],
+    [enums_1.VulnerabilityCategory.BROKEN_AUTHENTICATION]: ['CWE-287', 'CWE-798'],
+    [enums_1.VulnerabilityCategory.SECURITY_MISCONFIGURATION]: ['CWE-16', 'CWE-2'],
 };
-export function getCWEInfo(cweId) {
-    return CWE_MAPPING[cweId] || null;
+function getCWEInfo(cweId) {
+    return exports.CWE_MAPPING[cweId] || null;
 }
-export function getCWEsForCategory(category) {
-    return CATEGORY_TO_CWE[category] || [];
+function getCWEsForCategory(category) {
+    return exports.CATEGORY_TO_CWE[category] || [];
 }
-export function getPrimaryCWE(category) {
+function getPrimaryCWE(category) {
     const cwes = getCWEsForCategory(category);
     return cwes.length > 0 ? (cwes[0] ?? null) : null;
 }
-export function mapVulnerabilityToCWE(vulnerability) {
+function mapVulnerabilityToCWE(vulnerability) {
     if (!vulnerability.cwe) {
         vulnerability.cwe = getPrimaryCWE(vulnerability.category);
     }
     return vulnerability;
 }
-export function getCWEInfoForCategory(category) {
+function getCWEInfoForCategory(category) {
     const cwes = getCWEsForCategory(category);
     return cwes.map((cwe) => getCWEInfo(cwe)).filter((info) => info !== null);
 }

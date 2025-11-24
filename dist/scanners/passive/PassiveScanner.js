@@ -1,42 +1,45 @@
-import { ScannerType, ScanStatus, LogLevel, VulnerabilityCategory } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-import { NetworkInterceptor, } from './NetworkInterceptor';
-export class PassiveScanner {
-    type = ScannerType.PASSIVE;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PassiveScanner = void 0;
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+const NetworkInterceptor_1 = require("./NetworkInterceptor");
+class PassiveScanner {
+    type = enums_1.ScannerType.PASSIVE;
     id = 'passive-scanner';
     name = 'Passive Scanner';
     version = '1.0.0';
     description = 'Passive security scanner that analyzes network traffic without modifying requests';
     enabledByDefault = true;
-    category = VulnerabilityCategory.DATA_EXPOSURE;
+    category = enums_1.VulnerabilityCategory.DATA_EXPOSURE;
     logger;
     config;
     networkInterceptor;
     detectors = [];
     vulnerabilities = [];
     context = null;
-    status = ScanStatus.PENDING;
+    status = enums_1.ScanStatus.PENDING;
     constructor(config = {}) {
-        this.logger = new Logger(LogLevel.INFO, 'PassiveScanner');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'PassiveScanner');
         this.config = {
             crawlDepth: 1,
             maxPages: 10,
             waitTime: 2000,
             ...config,
         };
-        this.networkInterceptor = new NetworkInterceptor(config.networkInterceptor);
+        this.networkInterceptor = new NetworkInterceptor_1.NetworkInterceptor(config.networkInterceptor);
         this.setupNetworkListeners();
     }
     async initialize(context) {
         this.logger.info('Initializing PassiveScanner');
         this.context = context;
-        this.status = ScanStatus.RUNNING;
+        this.status = enums_1.ScanStatus.RUNNING;
         try {
             await this.networkInterceptor.attach(context.page);
             this.logger.info('PassiveScanner initialized successfully');
         }
         catch (error) {
-            this.status = ScanStatus.FAILED;
+            this.status = enums_1.ScanStatus.FAILED;
             this.logger.error(`Failed to initialize PassiveScanner: ${error}`);
             throw error;
         }
@@ -46,7 +49,7 @@ export class PassiveScanner {
             throw new Error('Scanner not initialized. Call initialize() first.');
         }
         this.logger.info('Starting passive scan execution');
-        this.status = ScanStatus.RUNNING;
+        this.status = enums_1.ScanStatus.RUNNING;
         const startTime = Date.now();
         try {
             const { page, config } = this.context;
@@ -58,7 +61,7 @@ export class PassiveScanner {
             });
             await this.waitForPageLoad();
             await this.runDetectors();
-            this.status = ScanStatus.COMPLETED;
+            this.status = enums_1.ScanStatus.COMPLETED;
             const endTime = Date.now();
             this.logger.info(`Passive scan completed. Found ${this.vulnerabilities.length} vulnerabilities`);
             return {
@@ -81,7 +84,7 @@ export class PassiveScanner {
             };
         }
         catch (error) {
-            this.status = ScanStatus.FAILED;
+            this.status = enums_1.ScanStatus.FAILED;
             this.logger.error(`Passive scan failed: ${error}`);
             throw error;
         }
@@ -92,7 +95,7 @@ export class PassiveScanner {
             this.networkInterceptor.detach();
             this.vulnerabilities = [];
             this.context = null;
-            this.status = ScanStatus.PENDING;
+            this.status = enums_1.ScanStatus.PENDING;
             this.logger.info('PassiveScanner cleanup completed');
         }
         catch (error) {
@@ -175,4 +178,5 @@ export class PassiveScanner {
         return true;
     }
 }
+exports.PassiveScanner = PassiveScanner;
 //# sourceMappingURL=PassiveScanner.js.map

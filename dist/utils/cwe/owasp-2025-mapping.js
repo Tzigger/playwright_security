@@ -1,4 +1,9 @@
-export var OWASP2025Category;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.OWASP2025Stats = exports.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES = exports.A09_LOGGING_ALERTING_FAILURES_CWES = exports.A08_SOFTWARE_DATA_INTEGRITY_CWES = exports.A07_AUTHENTICATION_FAILURES_CWES = exports.A06_INSECURE_DESIGN_CWES = exports.A05_INJECTION_CWES = exports.A04_CRYPTOGRAPHIC_FAILURES_CWES = exports.A03_SOFTWARE_SUPPLY_CHAIN_CWES = exports.A02_SECURITY_MISCONFIGURATION_CWES = exports.A01_BROKEN_ACCESS_CONTROL_CWES = exports.OWASP2025Category = void 0;
+exports.getOWASP2025Category = getOWASP2025Category;
+exports.getCWEsForOWASPCategory = getCWEsForOWASPCategory;
+var OWASP2025Category;
 (function (OWASP2025Category) {
     OWASP2025Category["A01_BROKEN_ACCESS_CONTROL"] = "A01:2025";
     OWASP2025Category["A02_SECURITY_MISCONFIGURATION"] = "A02:2025";
@@ -10,8 +15,8 @@ export var OWASP2025Category;
     OWASP2025Category["A08_SOFTWARE_DATA_INTEGRITY"] = "A08:2025";
     OWASP2025Category["A09_LOGGING_ALERTING_FAILURES"] = "A09:2025";
     OWASP2025Category["A10_MISHANDLING_EXCEPTIONAL_CONDITIONS"] = "A10:2025";
-})(OWASP2025Category || (OWASP2025Category = {}));
-export const A01_BROKEN_ACCESS_CONTROL_CWES = [
+})(OWASP2025Category || (exports.OWASP2025Category = OWASP2025Category = {}));
+exports.A01_BROKEN_ACCESS_CONTROL_CWES = [
     'CWE-22',
     'CWE-23',
     'CWE-35',
@@ -53,7 +58,7 @@ export const A01_BROKEN_ACCESS_CONTROL_CWES = [
     'CWE-98',
     'CWE-99',
 ];
-export const A02_SECURITY_MISCONFIGURATION_CWES = [
+exports.A02_SECURITY_MISCONFIGURATION_CWES = [
     'CWE-2',
     'CWE-11',
     'CWE-13',
@@ -71,14 +76,14 @@ export const A02_SECURITY_MISCONFIGURATION_CWES = [
     'CWE-756',
     'CWE-942',
 ];
-export const A03_SOFTWARE_SUPPLY_CHAIN_CWES = [
+exports.A03_SOFTWARE_SUPPLY_CHAIN_CWES = [
     'CWE-829',
     'CWE-830',
     'CWE-915',
     'CWE-1104',
     'CWE-1329',
 ];
-export const A04_CRYPTOGRAPHIC_FAILURES_CWES = [
+exports.A04_CRYPTOGRAPHIC_FAILURES_CWES = [
     'CWE-261',
     'CWE-296',
     'CWE-310',
@@ -112,7 +117,7 @@ export const A04_CRYPTOGRAPHIC_FAILURES_CWES = [
     'CWE-311',
     'CWE-326',
 ];
-export const A05_INJECTION_CWES = [
+exports.A05_INJECTION_CWES = [
     'CWE-20',
     'CWE-74',
     'CWE-75',
@@ -152,7 +157,7 @@ export const A05_INJECTION_CWES = [
     'CWE-943',
     'CWE-1333',
 ];
-export const A06_INSECURE_DESIGN_CWES = [
+exports.A06_INSECURE_DESIGN_CWES = [
     'CWE-73',
     'CWE-183',
     'CWE-209',
@@ -194,7 +199,7 @@ export const A06_INSECURE_DESIGN_CWES = [
     'CWE-1021',
     'CWE-1173',
 ];
-export const A07_AUTHENTICATION_FAILURES_CWES = [
+exports.A07_AUTHENTICATION_FAILURES_CWES = [
     'CWE-255',
     'CWE-259',
     'CWE-287',
@@ -232,7 +237,7 @@ export const A07_AUTHENTICATION_FAILURES_CWES = [
     'CWE-916',
     'CWE-1390',
 ];
-export const A08_SOFTWARE_DATA_INTEGRITY_CWES = [
+exports.A08_SOFTWARE_DATA_INTEGRITY_CWES = [
     'CWE-345',
     'CWE-353',
     'CWE-426',
@@ -244,7 +249,7 @@ export const A08_SOFTWARE_DATA_INTEGRITY_CWES = [
     'CWE-830',
     'CWE-915',
 ];
-export const A09_LOGGING_ALERTING_FAILURES_CWES = [
+exports.A09_LOGGING_ALERTING_FAILURES_CWES = [
     'CWE-117',
     'CWE-223',
     'CWE-532',
@@ -254,7 +259,7 @@ export const A09_LOGGING_ALERTING_FAILURES_CWES = [
     'CWE-532',
     'CWE-778',
 ];
-export const A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES = [
+exports.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES = [
     'CWE-248',
     'CWE-252',
     'CWE-253',
@@ -280,67 +285,67 @@ export const A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES = [
     'CWE-393',
     'CWE-544',
 ];
-export function getOWASP2025Category(cwe) {
+function getOWASP2025Category(cwe) {
     const cweNum = cwe.replace('CWE-', '');
-    if (A01_BROKEN_ACCESS_CONTROL_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A01_BROKEN_ACCESS_CONTROL_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A01_BROKEN_ACCESS_CONTROL;
     }
-    if (A02_SECURITY_MISCONFIGURATION_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A02_SECURITY_MISCONFIGURATION_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A02_SECURITY_MISCONFIGURATION;
     }
-    if (A03_SOFTWARE_SUPPLY_CHAIN_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A03_SOFTWARE_SUPPLY_CHAIN_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A03_SOFTWARE_SUPPLY_CHAIN;
     }
-    if (A04_CRYPTOGRAPHIC_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A04_CRYPTOGRAPHIC_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A04_CRYPTOGRAPHIC_FAILURES;
     }
-    if (A05_INJECTION_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A05_INJECTION_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A05_INJECTION;
     }
-    if (A06_INSECURE_DESIGN_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A06_INSECURE_DESIGN_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A06_INSECURE_DESIGN;
     }
-    if (A07_AUTHENTICATION_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A07_AUTHENTICATION_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A07_AUTHENTICATION_FAILURES;
     }
-    if (A08_SOFTWARE_DATA_INTEGRITY_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A08_SOFTWARE_DATA_INTEGRITY_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A08_SOFTWARE_DATA_INTEGRITY;
     }
-    if (A09_LOGGING_ALERTING_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A09_LOGGING_ALERTING_FAILURES_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A09_LOGGING_ALERTING_FAILURES;
     }
-    if (A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES.includes(`CWE-${cweNum}`)) {
+    if (exports.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES.includes(`CWE-${cweNum}`)) {
         return OWASP2025Category.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS;
     }
     return null;
 }
-export function getCWEsForOWASPCategory(category) {
+function getCWEsForOWASPCategory(category) {
     switch (category) {
         case OWASP2025Category.A01_BROKEN_ACCESS_CONTROL:
-            return A01_BROKEN_ACCESS_CONTROL_CWES;
+            return exports.A01_BROKEN_ACCESS_CONTROL_CWES;
         case OWASP2025Category.A02_SECURITY_MISCONFIGURATION:
-            return A02_SECURITY_MISCONFIGURATION_CWES;
+            return exports.A02_SECURITY_MISCONFIGURATION_CWES;
         case OWASP2025Category.A03_SOFTWARE_SUPPLY_CHAIN:
-            return A03_SOFTWARE_SUPPLY_CHAIN_CWES;
+            return exports.A03_SOFTWARE_SUPPLY_CHAIN_CWES;
         case OWASP2025Category.A04_CRYPTOGRAPHIC_FAILURES:
-            return A04_CRYPTOGRAPHIC_FAILURES_CWES;
+            return exports.A04_CRYPTOGRAPHIC_FAILURES_CWES;
         case OWASP2025Category.A05_INJECTION:
-            return A05_INJECTION_CWES;
+            return exports.A05_INJECTION_CWES;
         case OWASP2025Category.A06_INSECURE_DESIGN:
-            return A06_INSECURE_DESIGN_CWES;
+            return exports.A06_INSECURE_DESIGN_CWES;
         case OWASP2025Category.A07_AUTHENTICATION_FAILURES:
-            return A07_AUTHENTICATION_FAILURES_CWES;
+            return exports.A07_AUTHENTICATION_FAILURES_CWES;
         case OWASP2025Category.A08_SOFTWARE_DATA_INTEGRITY:
-            return A08_SOFTWARE_DATA_INTEGRITY_CWES;
+            return exports.A08_SOFTWARE_DATA_INTEGRITY_CWES;
         case OWASP2025Category.A09_LOGGING_ALERTING_FAILURES:
-            return A09_LOGGING_ALERTING_FAILURES_CWES;
+            return exports.A09_LOGGING_ALERTING_FAILURES_CWES;
         case OWASP2025Category.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS:
-            return A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES;
+            return exports.A10_MISHANDLING_EXCEPTIONAL_CONDITIONS_CWES;
         default:
             return [];
     }
 }
-export const OWASP2025Stats = {
+exports.OWASP2025Stats = {
     [OWASP2025Category.A01_BROKEN_ACCESS_CONTROL]: {
         rank: 1,
         prevalence: '3.73%',

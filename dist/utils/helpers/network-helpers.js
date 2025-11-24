@@ -1,4 +1,19 @@
-export function parseUrl(url) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseUrl = parseUrl;
+exports.isUrlInScope = isUrlInScope;
+exports.matchesPattern = matchesPattern;
+exports.isSameOrigin = isSameOrigin;
+exports.extractDomain = extractDomain;
+exports.isExternalUrl = isExternalUrl;
+exports.normalizeUrl = normalizeUrl;
+exports.extractQueryParams = extractQueryParams;
+exports.hasQueryParams = hasQueryParams;
+exports.buildUrl = buildUrl;
+exports.isJsonResponse = isJsonResponse;
+exports.isHtmlResponse = isHtmlResponse;
+exports.isStaticResource = isStaticResource;
+function parseUrl(url) {
     try {
         return new URL(url);
     }
@@ -6,7 +21,7 @@ export function parseUrl(url) {
         return null;
     }
 }
-export function isUrlInScope(url, includePatterns, excludePatterns) {
+function isUrlInScope(url, includePatterns, excludePatterns) {
     for (const pattern of excludePatterns) {
         if (matchesPattern(url, pattern)) {
             return false;
@@ -22,7 +37,7 @@ export function isUrlInScope(url, includePatterns, excludePatterns) {
     }
     return false;
 }
-export function matchesPattern(url, pattern) {
+function matchesPattern(url, pattern) {
     try {
         const regex = new RegExp(pattern);
         return regex.test(url);
@@ -31,7 +46,7 @@ export function matchesPattern(url, pattern) {
         return url.includes(pattern);
     }
 }
-export function isSameOrigin(url1, url2) {
+function isSameOrigin(url1, url2) {
     const parsed1 = parseUrl(url1);
     const parsed2 = parseUrl(url2);
     if (!parsed1 || !parsed2) {
@@ -39,14 +54,14 @@ export function isSameOrigin(url1, url2) {
     }
     return parsed1.origin === parsed2.origin;
 }
-export function extractDomain(url) {
+function extractDomain(url) {
     const parsed = parseUrl(url);
     return parsed ? parsed.hostname : null;
 }
-export function isExternalUrl(url, baseUrl) {
+function isExternalUrl(url, baseUrl) {
     return !isSameOrigin(url, baseUrl);
 }
-export function normalizeUrl(url) {
+function normalizeUrl(url) {
     const parsed = parseUrl(url);
     if (!parsed) {
         return url;
@@ -59,7 +74,7 @@ export function normalizeUrl(url) {
     parsed.pathname = pathname;
     return parsed.toString();
 }
-export function extractQueryParams(url) {
+function extractQueryParams(url) {
     const parsed = parseUrl(url);
     if (!parsed) {
         return {};
@@ -70,14 +85,14 @@ export function extractQueryParams(url) {
     });
     return params;
 }
-export function hasQueryParams(url) {
+function hasQueryParams(url) {
     const parsed = parseUrl(url);
     if (!parsed) {
         return false;
     }
     return parsed.search.length > 1;
 }
-export function buildUrl(baseUrl, params) {
+function buildUrl(baseUrl, params) {
     const parsed = parseUrl(baseUrl);
     if (!parsed) {
         return baseUrl;
@@ -87,15 +102,15 @@ export function buildUrl(baseUrl, params) {
     });
     return parsed.toString();
 }
-export function isJsonResponse(headers) {
+function isJsonResponse(headers) {
     const contentType = headers['content-type'] || headers['Content-Type'] || '';
     return contentType.includes('application/json');
 }
-export function isHtmlResponse(headers) {
+function isHtmlResponse(headers) {
     const contentType = headers['content-type'] || headers['Content-Type'] || '';
     return contentType.includes('text/html');
 }
-export function isStaticResource(url) {
+function isStaticResource(url) {
     const staticExtensions = [
         '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico',
         '.css', '.woff', '.woff2', '.ttf', '.eot',

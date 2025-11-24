@@ -1,14 +1,18 @@
-import { Logger } from '../../utils/logger/Logger';
-import { LogLevel } from '../../types/enums';
-import { validateScanConfiguration as validateConfiguration } from '../../utils/validators/config-validator';
-import * as fs from 'fs';
-import * as path from 'path';
-export class ConfigurationManager {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ConfigurationManager = void 0;
+const tslib_1 = require("tslib");
+const Logger_1 = require("../../utils/logger/Logger");
+const enums_1 = require("../../types/enums");
+const config_validator_1 = require("../../utils/validators/config-validator");
+const fs = tslib_1.__importStar(require("fs"));
+const path = tslib_1.__importStar(require("path"));
+class ConfigurationManager {
     static instance;
     logger;
     currentConfig = null;
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'ConfigurationManager');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'ConfigurationManager');
     }
     static getInstance() {
         if (!ConfigurationManager.instance) {
@@ -25,7 +29,7 @@ export class ConfigurationManager {
             }
             const fileContent = fs.readFileSync(absolutePath, 'utf-8');
             const config = JSON.parse(fileContent);
-            const validation = validateConfiguration(config);
+            const validation = (0, config_validator_1.validateScanConfiguration)(config);
             if (!validation.valid) {
                 throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
             }
@@ -41,7 +45,7 @@ export class ConfigurationManager {
     loadFromObject(config) {
         this.logger.info('Loading configuration from object');
         try {
-            const validation = validateConfiguration(config);
+            const validation = (0, config_validator_1.validateScanConfiguration)(config);
             if (!validation.valid) {
                 throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
             }
@@ -70,7 +74,7 @@ export class ConfigurationManager {
         }
         this.logger.info('Merging configuration with overrides');
         const merged = this.deepMerge(this.currentConfig, overrides);
-        const validation = validateConfiguration(merged);
+        const validation = (0, config_validator_1.validateScanConfiguration)(merged);
         if (!validation.valid) {
             throw new Error(`Invalid merged configuration: ${validation.errors.join(', ')}`);
         }
@@ -150,4 +154,5 @@ export class ConfigurationManager {
         this.logger.setLevel(level);
     }
 }
+exports.ConfigurationManager = ConfigurationManager;
 //# sourceMappingURL=ConfigurationManager.js.map

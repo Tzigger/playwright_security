@@ -1,26 +1,29 @@
-import { VulnerabilityCategory, VulnerabilitySeverity, LogLevel } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-import { mapVulnerabilityToCWE } from '../../utils/cwe/cwe-mapping';
-import { API_KEY_PATTERNS, PASSWORD_PATTERNS, PRIVATE_KEY_PATTERNS, JWT_PATTERNS, DB_CONNECTION_PATTERNS, EMAIL_PATTERNS, PHONE_PATTERNS, CREDIT_CARD_PATTERNS, SSN_PATTERNS, } from '../../utils/patterns/sensitive-data-patterns';
-import { v4 as uuidv4 } from 'uuid';
-export class SensitiveDataDetector {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SensitiveDataDetector = void 0;
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+const cwe_mapping_1 = require("../../utils/cwe/cwe-mapping");
+const sensitive_data_patterns_1 = require("../../utils/patterns/sensitive-data-patterns");
+const uuid_1 = require("uuid");
+class SensitiveDataDetector {
     logger;
     allPatterns = new Map();
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'SensitiveDataDetector');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'SensitiveDataDetector');
         this.initializePatterns();
     }
     initializePatterns() {
         this.allPatterns = new Map([
-            ['API Keys', { patterns: API_KEY_PATTERNS, category: 'API Keys', severity: VulnerabilitySeverity.CRITICAL }],
-            ['Passwords', { patterns: PASSWORD_PATTERNS, category: 'Passwords', severity: VulnerabilitySeverity.CRITICAL }],
-            ['Private Keys', { patterns: PRIVATE_KEY_PATTERNS, category: 'Private Keys', severity: VulnerabilitySeverity.CRITICAL }],
-            ['JWT Tokens', { patterns: JWT_PATTERNS, category: 'JWT Tokens', severity: VulnerabilitySeverity.HIGH }],
-            ['Database Credentials', { patterns: DB_CONNECTION_PATTERNS, category: 'Database Credentials', severity: VulnerabilitySeverity.CRITICAL }],
-            ['Credit Cards', { patterns: CREDIT_CARD_PATTERNS, category: 'Credit Cards', severity: VulnerabilitySeverity.HIGH }],
-            ['SSN/CNP', { patterns: SSN_PATTERNS, category: 'Personal Identifiers', severity: VulnerabilitySeverity.HIGH }],
-            ['Emails', { patterns: EMAIL_PATTERNS, category: 'Email Addresses', severity: VulnerabilitySeverity.MEDIUM }],
-            ['Phone Numbers', { patterns: PHONE_PATTERNS, category: 'Phone Numbers', severity: VulnerabilitySeverity.MEDIUM }],
+            ['API Keys', { patterns: sensitive_data_patterns_1.API_KEY_PATTERNS, category: 'API Keys', severity: enums_1.VulnerabilitySeverity.CRITICAL }],
+            ['Passwords', { patterns: sensitive_data_patterns_1.PASSWORD_PATTERNS, category: 'Passwords', severity: enums_1.VulnerabilitySeverity.CRITICAL }],
+            ['Private Keys', { patterns: sensitive_data_patterns_1.PRIVATE_KEY_PATTERNS, category: 'Private Keys', severity: enums_1.VulnerabilitySeverity.CRITICAL }],
+            ['JWT Tokens', { patterns: sensitive_data_patterns_1.JWT_PATTERNS, category: 'JWT Tokens', severity: enums_1.VulnerabilitySeverity.HIGH }],
+            ['Database Credentials', { patterns: sensitive_data_patterns_1.DB_CONNECTION_PATTERNS, category: 'Database Credentials', severity: enums_1.VulnerabilitySeverity.CRITICAL }],
+            ['Credit Cards', { patterns: sensitive_data_patterns_1.CREDIT_CARD_PATTERNS, category: 'Credit Cards', severity: enums_1.VulnerabilitySeverity.HIGH }],
+            ['SSN/CNP', { patterns: sensitive_data_patterns_1.SSN_PATTERNS, category: 'Personal Identifiers', severity: enums_1.VulnerabilitySeverity.HIGH }],
+            ['Emails', { patterns: sensitive_data_patterns_1.EMAIL_PATTERNS, category: 'Email Addresses', severity: enums_1.VulnerabilitySeverity.MEDIUM }],
+            ['Phone Numbers', { patterns: sensitive_data_patterns_1.PHONE_PATTERNS, category: 'Phone Numbers', severity: enums_1.VulnerabilitySeverity.MEDIUM }],
         ]);
     }
     async detect(context) {
@@ -61,9 +64,9 @@ export class SensitiveDataDetector {
         }
         if (urlFindings.length > 0) {
             const vulnerability = {
-                id: uuidv4(),
-                category: VulnerabilityCategory.INFORMATION_DISCLOSURE,
-                severity: VulnerabilitySeverity.HIGH,
+                id: (0, uuid_1.v4)(),
+                category: enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE,
+                severity: enums_1.VulnerabilitySeverity.HIGH,
                 title: 'Sensitive Data in URL',
                 description: `Sensitive data detected in request URL: ${request.url}`,
                 url: request.url,
@@ -84,7 +87,7 @@ export class SensitiveDataDetector {
                 owasp: 'A01:2021 - Broken Access Control',
                 timestamp: Date.now(),
             };
-            const mappedVuln = mapVulnerabilityToCWE(vulnerability);
+            const mappedVuln = (0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability);
             vulnerabilities.push(mappedVuln);
         }
         if (request.postData) {
@@ -97,9 +100,9 @@ export class SensitiveDataDetector {
             }
             if (postDataFindings.length > 0) {
                 const vulnerability = {
-                    id: uuidv4(),
-                    category: VulnerabilityCategory.BROKEN_AUTHENTICATION,
-                    severity: VulnerabilitySeverity.CRITICAL,
+                    id: (0, uuid_1.v4)(),
+                    category: enums_1.VulnerabilityCategory.BROKEN_AUTHENTICATION,
+                    severity: enums_1.VulnerabilitySeverity.CRITICAL,
                     title: 'Credentials in Request Body',
                     description: 'Credentials detected in request body (verify if transmitted over HTTPS)',
                     url: request.url,
@@ -118,7 +121,7 @@ export class SensitiveDataDetector {
                     owasp: 'A02:2021 - Cryptographic Failures',
                     timestamp: Date.now(),
                 };
-                const mappedVuln = mapVulnerabilityToCWE(vulnerability);
+                const mappedVuln = (0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability);
                 vulnerabilities.push(mappedVuln);
             }
         }
@@ -137,8 +140,8 @@ export class SensitiveDataDetector {
     }
     createVulnerability(response, patternType, category, severity, findings) {
         const vulnerability = {
-            id: uuidv4(),
-            category: VulnerabilityCategory.INFORMATION_DISCLOSURE,
+            id: (0, uuid_1.v4)(),
+            category: enums_1.VulnerabilityCategory.INFORMATION_DISCLOSURE,
             severity,
             title: `Sensitive Data Exposure: ${patternType}`,
             description: `Detected ${patternType.toLowerCase()} exposed in HTTP response from ${response.url}`,
@@ -161,7 +164,7 @@ export class SensitiveDataDetector {
             owasp: 'A02:2021 - Cryptographic Failures',
             timestamp: Date.now(),
         };
-        return mapVulnerabilityToCWE(vulnerability);
+        return (0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability);
     }
     createSnippet(body, finding) {
         const index = body.indexOf(finding);
@@ -205,4 +208,5 @@ export class SensitiveDataDetector {
         return allPatterns;
     }
 }
+exports.SensitiveDataDetector = SensitiveDataDetector;
 //# sourceMappingURL=SensitiveDataDetector.js.map

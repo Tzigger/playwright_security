@@ -1,11 +1,14 @@
-import { VulnerabilityCategory, VulnerabilitySeverity, LogLevel } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-import { mapVulnerabilityToCWE } from '../../utils/cwe/cwe-mapping';
-import { v4 as uuidv4 } from 'uuid';
-export class CookieSecurityDetector {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CookieSecurityDetector = void 0;
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+const cwe_mapping_1 = require("../../utils/cwe/cwe-mapping");
+const uuid_1 = require("uuid");
+class CookieSecurityDetector {
     logger;
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'CookieSecurityDetector');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'CookieSecurityDetector');
     }
     async detect(context) {
         this.logger.info('Starting cookie security detection');
@@ -44,29 +47,29 @@ export class CookieSecurityDetector {
         const cookieName = this.extractCookieName(cookieHeader);
         const flags = this.parseCookieFlags(cookieHeader);
         if (!flags.httpOnly && this.isSessionCookie(cookieName)) {
-            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing HttpOnly Flag', 'Cookie accessible via JavaScript - vulnerable to XSS attacks', 'Add HttpOnly flag to prevent JavaScript access', VulnerabilitySeverity.HIGH, 'CWE-1004', cookieHeader));
+            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing HttpOnly Flag', 'Cookie accessible via JavaScript - vulnerable to XSS attacks', 'Add HttpOnly flag to prevent JavaScript access', enums_1.VulnerabilitySeverity.HIGH, 'CWE-1004', cookieHeader));
         }
         if (!flags.secure && this.isHttps(response.url)) {
-            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing Secure Flag', 'Cookie can be transmitted over unencrypted HTTP connections', 'Add Secure flag to ensure cookie is only sent over HTTPS', VulnerabilitySeverity.HIGH, 'CWE-614', cookieHeader));
+            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing Secure Flag', 'Cookie can be transmitted over unencrypted HTTP connections', 'Add Secure flag to ensure cookie is only sent over HTTPS', enums_1.VulnerabilitySeverity.HIGH, 'CWE-614', cookieHeader));
         }
         if (!flags.sameSite || flags.sameSite.toLowerCase() === 'none') {
-            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing/Weak SameSite Attribute', 'Cookie vulnerable to CSRF attacks - missing or set to None', 'Add SameSite=Strict or SameSite=Lax attribute', VulnerabilitySeverity.MEDIUM, 'CWE-352', cookieHeader));
+            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Missing/Weak SameSite Attribute', 'Cookie vulnerable to CSRF attacks - missing or set to None', 'Add SameSite=Strict or SameSite=Lax attribute', enums_1.VulnerabilitySeverity.MEDIUM, 'CWE-352', cookieHeader));
         }
         if (flags.domain && this.isDomainTooPermissive(flags.domain, response.url)) {
-            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Overly Permissive Domain', `Cookie domain (${flags.domain}) is too broad - accessible from multiple subdomains`, 'Set domain to most specific subdomain needed', VulnerabilitySeverity.LOW, 'CWE-16', cookieHeader));
+            vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Overly Permissive Domain', `Cookie domain (${flags.domain}) is too broad - accessible from multiple subdomains`, 'Set domain to most specific subdomain needed', enums_1.VulnerabilitySeverity.LOW, 'CWE-16', cookieHeader));
         }
         if (this.isSessionCookie(cookieName) && flags.expires) {
             const expirationDays = this.getExpirationDays(flags.expires);
             if (expirationDays > 30) {
-                vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Session Cookie with Long Expiration', `Session cookie expires in ${expirationDays} days - increases session hijacking risk`, 'Use session cookies without expiration or set shorter expiration time', VulnerabilitySeverity.LOW, 'CWE-613', cookieHeader));
+                vulnerabilities.push(this.createCookieVulnerability(response, cookieName, 'Session Cookie with Long Expiration', `Session cookie expires in ${expirationDays} days - increases session hijacking risk`, 'Use session cookies without expiration or set shorter expiration time', enums_1.VulnerabilitySeverity.LOW, 'CWE-613', cookieHeader));
             }
         }
         return vulnerabilities;
     }
     createCookieVulnerability(response, cookieName, title, description, remediation, severity, cwe, cookieHeader) {
         const vulnerability = {
-            id: uuidv4(),
-            category: VulnerabilityCategory.BROKEN_AUTHENTICATION,
+            id: (0, uuid_1.v4)(),
+            category: enums_1.VulnerabilityCategory.BROKEN_AUTHENTICATION,
             severity,
             title: `Cookie Security: ${title} (${cookieName})`,
             description,
@@ -90,7 +93,7 @@ export class CookieSecurityDetector {
             owasp: 'A07:2021 - Identification and Authentication Failures',
             timestamp: Date.now(),
         };
-        return mapVulnerabilityToCWE(vulnerability);
+        return (0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability);
     }
     extractCookieName(cookieHeader) {
         const match = cookieHeader.match(/^([^=]+)=/);
@@ -162,4 +165,5 @@ export class CookieSecurityDetector {
         return [];
     }
 }
+exports.CookieSecurityDetector = CookieSecurityDetector;
 //# sourceMappingURL=CookieSecurityDetector.js.map

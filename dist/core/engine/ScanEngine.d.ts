@@ -4,6 +4,7 @@ import { Vulnerability } from '../../types/vulnerability';
 import { ScanStatus, ScannerType } from '../../types/enums';
 import { IScanner } from '../interfaces/IScanner';
 import { EventEmitter } from 'events';
+import { IReporter } from '../../reporters/base/IReporter';
 export declare class ScanEngine extends EventEmitter {
     private logger;
     private browserManager;
@@ -14,9 +15,12 @@ export declare class ScanEngine extends EventEmitter {
     private scanStatus;
     private startTime;
     private endTime;
+    private reporters;
     constructor();
     registerScanner(scanner: IScanner): void;
     registerScanners(scanners: IScanner[]): void;
+    registerReporter(reporter: IReporter): void;
+    registerReporters(reporters: IReporter[]): void;
     loadConfiguration(config: ScanConfiguration): Promise<void>;
     loadConfigurationFromFile(filePath: string): Promise<void>;
     scan(): Promise<ScanResult>;
@@ -29,5 +33,6 @@ export declare class ScanEngine extends EventEmitter {
     getScannerCount(): number;
     hasScanner(type: ScannerType): boolean;
     getRegisteredScanners(): ScannerType[];
+    private initializeReporters;
 }
 //# sourceMappingURL=ScanEngine.d.ts.map

@@ -1,4 +1,7 @@
-export class BaseScanner {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BaseScanner = void 0;
+class BaseScanner {
     context;
     startTime;
     async initialize(context) {
@@ -32,4 +35,5 @@ export class BaseScanner {
         return this.context;
     }
 }
+exports.BaseScanner = BaseScanner;
 //# sourceMappingURL=IScanner.js.map

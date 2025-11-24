@@ -9,6 +9,12 @@ import { BrowserManager } from '../browser/BrowserManager';
 import { ConfigurationManager } from '../config/ConfigurationManager';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import { ReportFormat } from '../../types/enums';
+import { IReporter } from '../../reporters/base/IReporter';
+import { ConsoleReporter } from '../../reporters/ConsoleReporter';
+import { JsonReporter } from '../../reporters/JsonReporter';
+import { HtmlReporter } from '../../reporters/HtmlReporter';
+import { SarifReporter } from '../../reporters/SarifReporter';
 
 /**
  * ScanEngine - Orchestrator principal pentru scanări DAST
@@ -24,6 +30,7 @@ export class ScanEngine extends EventEmitter {
   private scanStatus: ScanStatus = ScanStatus.PENDING;
   private startTime: number = 0;
   private endTime: number = 0;
+  private reporters: IReporter[] = [];
 
   constructor() {
     super();
@@ -45,6 +52,16 @@ export class ScanEngine extends EventEmitter {
    */
   public registerScanners(scanners: IScanner[]): void {
     scanners.forEach((scanner) => this.registerScanner(scanner));
+  }
+
+  /** Înregistrează un reporter */
+  public registerReporter(reporter: IReporter): void {
+    this.reporters.push(reporter);
+  }
+
+  /** Înregistrează multiple reportere */
+  public registerReporters(reporters: IReporter[]): void {
+    reporters.forEach((r) => this.registerReporter(r));
   }
 
   /**
@@ -85,6 +102,10 @@ export class ScanEngine extends EventEmitter {
 
     this.emit('scanStarted', { scanId: this.scanId, config });
 
+    // Initialize reporters based on configuration
+    await this.initializeReporters(config);
+    await Promise.all(this.reporters.map((r) => r.onScanStarted(this.scanId!, config)));
+
     let browserContext: BrowserContext | null = null;
     let page: Page | null = null;
 
@@ -106,25 +127,51 @@ export class ScanEngine extends EventEmitter {
         emitVulnerability: (vuln: unknown) => this.handleVulnerability(vuln as Vulnerability),
       };
 
-      // 4. Rulează fiecare scanner înregistrat
-      for (const [type, scanner] of this.scanners.entries()) {
+      // 4. Rulează fiecare scanner înregistrat (posibil paralel)
+      const enabledScanners = Array.from(this.scanners.entries()).filter(([_, s]) =>
+        s.isEnabled(config)
+      );
+
+      const parallelism = Math.max(1, config.advanced?.parallelism || 1);
+      const runScanner = async (type: ScannerType, scanner: IScanner) => {
         try {
           this.logger.info(`Running scanner: ${type}`);
           this.emit('scannerStarted', { scannerType: type });
+          await Promise.all(this.reporters.map((r) => r.onScannerStarted(String(type))));
 
-          // Inițializare scanner
-          await scanner.initialize(scanContext);
+          // Per-scanner context and page
+          const subContextId = `${this.scanId}-${String(type)}`;
+          const subBrowserContext = await this.browserManager.createContext(subContextId);
+          const subPage = await this.browserManager.createPage(subContextId);
 
-          // Execută scanarea
+          const ctx: ScanContext = {
+            ...scanContext,
+            page: subPage,
+            browserContext: subBrowserContext,
+            emitVulnerability: (v) => this.handleVulnerability(v as Vulnerability),
+          };
+
+          await scanner.initialize(ctx);
           await scanner.execute();
-
-          // Cleanup scanner
           await scanner.cleanup();
 
+          await this.browserManager.closeContext(subContextId);
+
           this.emit('scannerCompleted', { scannerType: type });
+          await Promise.all(this.reporters.map((r) => r.onScannerCompleted(String(type))));
         } catch (error) {
           this.logger.error(`Scanner ${type} failed: ${error}`);
           this.emit('scannerFailed', { scannerType: type, error });
+        }
+      };
+
+      if (parallelism > 1 && enabledScanners.length > 1) {
+        // Run all scanners in parallel (bounded by parallelism if needed)
+        await Promise.all(enabledScanners.map(([type, scanner]) => runScanner(type, scanner)));
+      } else {
+        // Sequential
+        for (const [type, scanner] of enabledScanners) {
+          await runScanner(type, scanner);
         }
       }
 
@@ -151,6 +198,10 @@ export class ScanEngine extends EventEmitter {
     const result = this.generateScanResult();
     this.emit('scanCompleted', result);
 
+    // Notify reporters and generate outputs
+    await Promise.all(this.reporters.map((r) => r.onScanCompleted(result)));
+    await Promise.all(this.reporters.map((r) => r.generate(result)));
+
     return result;
   }
 
@@ -163,6 +214,8 @@ export class ScanEngine extends EventEmitter {
       `Vulnerability detected: [${vulnerability.severity}] ${vulnerability.title}`
     );
     this.emit('vulnerabilityDetected', vulnerability);
+    // Fan-out to reporters
+    void Promise.all(this.reporters.map((r) => r.onVulnerability(vulnerability)));
   }
 
   /**
@@ -220,6 +273,7 @@ export class ScanEngine extends EventEmitter {
     try {
       await this.browserManager.cleanup();
       this.scanners.clear();
+      this.reporters = [];
       this.vulnerabilities = [];
       this.scanId = null;
       this.scanStatus = ScanStatus.PENDING;
@@ -262,5 +316,33 @@ export class ScanEngine extends EventEmitter {
    */
   public getRegisteredScanners(): ScannerType[] {
     return Array.from(this.scanners.keys());
+  }
+
+  /** Initialize reporters from config */
+  private async initializeReporters(config: any): Promise<void> {
+    // If reporters already configured, skip
+    if (this.reporters.length > 0) return;
+    const formats: ReportFormat[] = config.reporting?.formats || [ReportFormat.CONSOLE];
+    const options = {
+      outputDir: config.reporting?.outputDir || 'reports',
+      verbosity: config.reporting?.verbosity || 'normal',
+      includeScreenshots: config.reporting?.includeScreenshots || false,
+      fileNameTemplate: config.reporting?.fileNameTemplate,
+      openInBrowser: config.reporting?.openInBrowser || false,
+    };
+
+    const created: IReporter[] = [];
+    for (const f of formats) {
+      if (f === ReportFormat.CONSOLE) created.push(new ConsoleReporter());
+      if (f === ReportFormat.JSON) created.push(new JsonReporter());
+      if (f === ReportFormat.HTML) created.push(new HtmlReporter());
+      if (f === ReportFormat.SARIF) created.push(new SarifReporter());
+    }
+
+    // De-dup by format
+    const byFmt = new Map<string, IReporter>();
+    for (const r of created) byFmt.set(r.getFormat(), r);
+    this.reporters = Array.from(byFmt.values());
+    await Promise.all(this.reporters.map((r) => r.init(config, options)));
   }
 }

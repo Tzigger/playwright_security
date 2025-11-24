@@ -1,4 +1,10 @@
-export const SQL_ERROR_PATTERNS = [
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ALL_ERROR_PATTERNS = exports.COMMAND_INJECTION_ERROR_PATTERNS = exports.AUTH_ERROR_PATTERNS = exports.DATABASE_ERROR_PATTERNS = exports.PATH_DISCLOSURE_PATTERNS = exports.STACK_TRACE_PATTERNS = exports.APPLICATION_ERROR_PATTERNS = exports.SQL_ERROR_PATTERNS = void 0;
+exports.containsErrorPattern = containsErrorPattern;
+exports.findErrorPatterns = findErrorPatterns;
+exports.categorizeError = categorizeError;
+exports.SQL_ERROR_PATTERNS = [
     /SQL syntax.*?error/i,
     /syntax error.*?SQL/i,
     /unclosed quotation mark/i,
@@ -23,7 +29,7 @@ export const SQL_ERROR_PATTERNS = [
     /SQLite\/JDBCDriver/i,
     /System\.Data\.SQLite/i,
 ];
-export const APPLICATION_ERROR_PATTERNS = [
+exports.APPLICATION_ERROR_PATTERNS = [
     /internal server error/i,
     /500 Internal Server Error/i,
     /runtime error/i,
@@ -32,7 +38,7 @@ export const APPLICATION_ERROR_PATTERNS = [
     /stack trace/i,
     /error in your application/i,
 ];
-export const STACK_TRACE_PATTERNS = [
+exports.STACK_TRACE_PATTERNS = [
     /Traceback \(most recent call last\)/i,
     /File ".*?", line \d+/i,
     /at java\./i,
@@ -50,13 +56,13 @@ export const STACK_TRACE_PATTERNS = [
     /at [A-Za-z]+\s+\(.*?:\d+:\d+\)/i,
     /at Module\./i,
 ];
-export const PATH_DISCLOSURE_PATTERNS = [
+exports.PATH_DISCLOSURE_PATTERNS = [
     /[A-Z]:\\[^<>"']+/i,
     /\\\\[A-Za-z0-9_.-]+\\/i,
     /\/(?:home|usr|var|etc)\/[^\s<>"']+/i,
     /\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\//i,
 ];
-export const DATABASE_ERROR_PATTERNS = [
+exports.DATABASE_ERROR_PATTERNS = [
     /database error/i,
     /db error/i,
     /connection.*?failed/i,
@@ -64,7 +70,7 @@ export const DATABASE_ERROR_PATTERNS = [
     /unable to connect/i,
     /access denied for user/i,
 ];
-export const AUTH_ERROR_PATTERNS = [
+exports.AUTH_ERROR_PATTERNS = [
     /authentication failed/i,
     /invalid credentials/i,
     /access denied/i,
@@ -72,27 +78,27 @@ export const AUTH_ERROR_PATTERNS = [
     /permission denied/i,
     /insufficient privileges/i,
 ];
-export const COMMAND_INJECTION_ERROR_PATTERNS = [
+exports.COMMAND_INJECTION_ERROR_PATTERNS = [
     /sh: .*?: command not found/i,
     /bash: .*?: command not found/i,
     /is not recognized as an internal or external command/i,
     /cannot execute/i,
 ];
-export const ALL_ERROR_PATTERNS = [
-    ...SQL_ERROR_PATTERNS,
-    ...APPLICATION_ERROR_PATTERNS,
-    ...STACK_TRACE_PATTERNS,
-    ...PATH_DISCLOSURE_PATTERNS,
-    ...DATABASE_ERROR_PATTERNS,
-    ...AUTH_ERROR_PATTERNS,
-    ...COMMAND_INJECTION_ERROR_PATTERNS,
+exports.ALL_ERROR_PATTERNS = [
+    ...exports.SQL_ERROR_PATTERNS,
+    ...exports.APPLICATION_ERROR_PATTERNS,
+    ...exports.STACK_TRACE_PATTERNS,
+    ...exports.PATH_DISCLOSURE_PATTERNS,
+    ...exports.DATABASE_ERROR_PATTERNS,
+    ...exports.AUTH_ERROR_PATTERNS,
+    ...exports.COMMAND_INJECTION_ERROR_PATTERNS,
 ];
-export function containsErrorPattern(text) {
-    return ALL_ERROR_PATTERNS.some(pattern => pattern.test(text));
+function containsErrorPattern(text) {
+    return exports.ALL_ERROR_PATTERNS.some(pattern => pattern.test(text));
 }
-export function findErrorPatterns(text) {
+function findErrorPatterns(text) {
     const results = [];
-    for (const pattern of ALL_ERROR_PATTERNS) {
+    for (const pattern of exports.ALL_ERROR_PATTERNS) {
         const matches = text.match(pattern);
         if (matches && matches.length > 0) {
             results.push({ pattern, matches });
@@ -100,20 +106,20 @@ export function findErrorPatterns(text) {
     }
     return results;
 }
-export function categorizeError(text) {
-    if (SQL_ERROR_PATTERNS.some(p => p.test(text)))
+function categorizeError(text) {
+    if (exports.SQL_ERROR_PATTERNS.some(p => p.test(text)))
         return 'SQL Error';
-    if (STACK_TRACE_PATTERNS.some(p => p.test(text)))
+    if (exports.STACK_TRACE_PATTERNS.some(p => p.test(text)))
         return 'Stack Trace';
-    if (PATH_DISCLOSURE_PATTERNS.some(p => p.test(text)))
+    if (exports.PATH_DISCLOSURE_PATTERNS.some(p => p.test(text)))
         return 'Path Disclosure';
-    if (DATABASE_ERROR_PATTERNS.some(p => p.test(text)))
+    if (exports.DATABASE_ERROR_PATTERNS.some(p => p.test(text)))
         return 'Database Error';
-    if (AUTH_ERROR_PATTERNS.some(p => p.test(text)))
+    if (exports.AUTH_ERROR_PATTERNS.some(p => p.test(text)))
         return 'Authentication Error';
-    if (COMMAND_INJECTION_ERROR_PATTERNS.some(p => p.test(text)))
+    if (exports.COMMAND_INJECTION_ERROR_PATTERNS.some(p => p.test(text)))
         return 'Command Injection';
-    if (APPLICATION_ERROR_PATTERNS.some(p => p.test(text)))
+    if (exports.APPLICATION_ERROR_PATTERNS.some(p => p.test(text)))
         return 'Application Error';
     return null;
 }

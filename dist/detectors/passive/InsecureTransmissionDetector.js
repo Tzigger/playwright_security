@@ -1,8 +1,11 @@
-import { VulnerabilityCategory, VulnerabilitySeverity, HttpMethod, LogLevel } from '../../types/enums';
-import { Logger } from '../../utils/logger/Logger';
-import { mapVulnerabilityToCWE } from '../../utils/cwe/cwe-mapping';
-import { v4 as uuidv4 } from 'uuid';
-export class InsecureTransmissionDetector {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.InsecureTransmissionDetector = void 0;
+const enums_1 = require("../../types/enums");
+const Logger_1 = require("../../utils/logger/Logger");
+const cwe_mapping_1 = require("../../utils/cwe/cwe-mapping");
+const uuid_1 = require("uuid");
+class InsecureTransmissionDetector {
     logger;
     sensitiveParamNames = [
         'password',
@@ -22,14 +25,14 @@ export class InsecureTransmissionDetector {
         'pin',
     ];
     constructor() {
-        this.logger = new Logger(LogLevel.INFO, 'InsecureTransmissionDetector');
+        this.logger = new Logger_1.Logger(enums_1.LogLevel.INFO, 'InsecureTransmissionDetector');
     }
     async detect(context) {
         this.logger.info('Starting insecure transmission detection');
         const vulnerabilities = [];
         try {
             for (const request of context.requests) {
-                if (request.method === HttpMethod.GET) {
+                if (request.method === enums_1.HttpMethod.GET) {
                     const urlVulns = this.detectSensitiveDataInUrl(request);
                     vulnerabilities.push(...urlVulns);
                 }
@@ -60,9 +63,9 @@ export class InsecureTransmissionDetector {
             });
             if (sensitiveParams.length > 0) {
                 const vulnerability = {
-                    id: uuidv4(),
-                    category: VulnerabilityCategory.INSECURE_COMMUNICATION,
-                    severity: VulnerabilitySeverity.HIGH,
+                    id: (0, uuid_1.v4)(),
+                    category: enums_1.VulnerabilityCategory.INSECURE_COMMUNICATION,
+                    severity: enums_1.VulnerabilitySeverity.HIGH,
                     title: 'Sensitive Data in URL Parameters',
                     description: `Sensitive parameters detected in GET request URL: ${sensitiveParams.join(', ')}`,
                     url: request.url,
@@ -84,7 +87,7 @@ export class InsecureTransmissionDetector {
                     owasp: 'A02:2021 - Cryptographic Failures',
                     timestamp: Date.now(),
                 };
-                vulnerabilities.push(mapVulnerabilityToCWE(vulnerability));
+                vulnerabilities.push((0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability));
             }
         }
         catch (error) {
@@ -96,13 +99,13 @@ export class InsecureTransmissionDetector {
         const vulnerabilities = [];
         const hasSensitiveData = request.postData && this.containsSensitiveKeywords(request.postData);
         const shouldFlag = hasSensitiveData ||
-            request.method === HttpMethod.POST ||
+            request.method === enums_1.HttpMethod.POST ||
             request.resourceType === 'document';
         if (shouldFlag) {
             const vulnerability = {
-                id: uuidv4(),
-                category: VulnerabilityCategory.INSECURE_COMMUNICATION,
-                severity: VulnerabilitySeverity.CRITICAL,
+                id: (0, uuid_1.v4)(),
+                category: enums_1.VulnerabilityCategory.INSECURE_COMMUNICATION,
+                severity: enums_1.VulnerabilitySeverity.CRITICAL,
                 title: 'Insecure HTTP Transmission',
                 description: `Data transmitted over unencrypted HTTP connection to ${request.url}`,
                 url: request.url,
@@ -124,7 +127,7 @@ export class InsecureTransmissionDetector {
                 owasp: 'A02:2021 - Cryptographic Failures',
                 timestamp: Date.now(),
             };
-            vulnerabilities.push(mapVulnerabilityToCWE(vulnerability));
+            vulnerabilities.push((0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability));
         }
         return vulnerabilities;
     }
@@ -138,9 +141,9 @@ export class InsecureTransmissionDetector {
         if (httpResources.length > 0) {
             const resourceTypes = [...new Set(httpResources.map((r) => r.resourceType))];
             const vulnerability = {
-                id: uuidv4(),
-                category: VulnerabilityCategory.INSECURE_COMMUNICATION,
-                severity: VulnerabilitySeverity.MEDIUM,
+                id: (0, uuid_1.v4)(),
+                category: enums_1.VulnerabilityCategory.INSECURE_COMMUNICATION,
+                severity: enums_1.VulnerabilitySeverity.MEDIUM,
                 title: 'Mixed Content Detected',
                 description: `HTTPS page loading ${httpResources.length} HTTP resources (${resourceTypes.join(', ')})`,
                 url: httpsPage.url,
@@ -161,7 +164,7 @@ export class InsecureTransmissionDetector {
                 owasp: 'A02:2021 - Cryptographic Failures',
                 timestamp: Date.now(),
             };
-            vulnerabilities.push(mapVulnerabilityToCWE(vulnerability));
+            vulnerabilities.push((0, cwe_mapping_1.mapVulnerabilityToCWE)(vulnerability));
         }
         return vulnerabilities;
     }
@@ -183,4 +186,5 @@ export class InsecureTransmissionDetector {
         return [];
     }
 }
+exports.InsecureTransmissionDetector = InsecureTransmissionDetector;
 //# sourceMappingURL=InsecureTransmissionDetector.js.map

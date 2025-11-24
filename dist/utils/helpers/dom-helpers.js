@@ -1,4 +1,22 @@
-export async function findInputElements(page) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.findInputElements = findInputElements;
+exports.findForms = findForms;
+exports.findLinks = findLinks;
+exports.isElementVisible = isElementVisible;
+exports.isElementEditable = isElementEditable;
+exports.getElementAttributes = getElementAttributes;
+exports.getElementSelector = getElementSelector;
+exports.getElementPosition = getElementPosition;
+exports.waitForElementStable = waitForElementStable;
+exports.safeFill = safeFill;
+exports.safeClick = safeClick;
+exports.getPageHTML = getPageHTML;
+exports.getPageText = getPageText;
+exports.takeScreenshot = takeScreenshot;
+exports.hasErrorMessages = hasErrorMessages;
+exports.getErrorMessages = getErrorMessages;
+async function findInputElements(page) {
     const selectors = [
         'input:not([type="hidden"]):not([type="submit"]):not([type="button"])',
         'textarea',
@@ -12,13 +30,13 @@ export async function findInputElements(page) {
     }
     return elements;
 }
-export async function findForms(page) {
+async function findForms(page) {
     return await page.locator('form').all();
 }
-export async function findLinks(page) {
+async function findLinks(page) {
     return await page.locator('a[href]').all();
 }
-export async function isElementVisible(element) {
+async function isElementVisible(element) {
     try {
         return await element.isVisible();
     }
@@ -26,7 +44,7 @@ export async function isElementVisible(element) {
         return false;
     }
 }
-export async function isElementEditable(element) {
+async function isElementEditable(element) {
     try {
         return await element.isEditable();
     }
@@ -34,7 +52,7 @@ export async function isElementEditable(element) {
         return false;
     }
 }
-export async function getElementAttributes(element) {
+async function getElementAttributes(element) {
     try {
         const attributes = {};
         const attrNames = ['id', 'name', 'class', 'type', 'value', 'placeholder', 'required'];
@@ -50,7 +68,7 @@ export async function getElementAttributes(element) {
         return {};
     }
 }
-export async function getElementSelector(element) {
+async function getElementSelector(element) {
     try {
         const id = await element.getAttribute('id');
         if (id) {
@@ -67,7 +85,7 @@ export async function getElementSelector(element) {
         return 'unknown';
     }
 }
-export async function getElementPosition(element) {
+async function getElementPosition(element) {
     try {
         const box = await element.boundingBox();
         return box;
@@ -76,14 +94,14 @@ export async function getElementPosition(element) {
         return null;
     }
 }
-export async function waitForElementStable(element, timeout = 1000) {
+async function waitForElementStable(element, timeout = 1000) {
     try {
         await element.waitFor({ state: 'attached', timeout });
     }
     catch {
     }
 }
-export async function safeFill(element, value) {
+async function safeFill(element, value) {
     try {
         await element.clear();
         await element.fill(value);
@@ -93,7 +111,7 @@ export async function safeFill(element, value) {
         return false;
     }
 }
-export async function safeClick(element) {
+async function safeClick(element) {
     try {
         await element.click({ timeout: 5000 });
         return true;
@@ -102,17 +120,17 @@ export async function safeClick(element) {
         return false;
     }
 }
-export async function getPageHTML(page) {
+async function getPageHTML(page) {
     return await page.content();
 }
-export async function getPageText(page) {
+async function getPageText(page) {
     return await page.textContent('body') || '';
 }
-export async function takeScreenshot(page) {
+async function takeScreenshot(page) {
     const screenshot = await page.screenshot();
     return screenshot.toString('base64');
 }
-export async function hasErrorMessages(page) {
+async function hasErrorMessages(page) {
     const errorSelectors = [
         '.error',
         '.alert-error',
@@ -128,7 +146,7 @@ export async function hasErrorMessages(page) {
     }
     return false;
 }
-export async function getErrorMessages(page) {
+async function getErrorMessages(page) {
     const errorSelectors = [
         '.error',
         '.alert-error',

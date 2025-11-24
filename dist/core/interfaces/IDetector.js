@@ -1,4 +1,7 @@
-export class BaseDetector {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BaseDetector = void 0;
+class BaseDetector {
     enabledByDefault = true;
     async validate(vulnerability) {
         return (vulnerability.confidence ?? 0.8) > 0.5;
@@ -37,4 +40,5 @@ export class BaseDetector {
         return Math.min(sum / factors.length, 1.0);
     }
 }
+exports.BaseDetector = BaseDetector;
 //# sourceMappingURL=IDetector.js.map
