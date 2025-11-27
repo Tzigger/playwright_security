@@ -6,7 +6,12 @@ import { ScanEngine } from '../core/engine/ScanEngine';
 import { ErrorBasedDetector } from '../detectors/active/ErrorBasedDetector';
 import { SqlInjectionDetector } from '../detectors/active/SqlInjectionDetector';
 import { XssDetector } from '../detectors/active/XssDetector';
+import { SensitiveDataDetector } from '../detectors/passive/SensitiveDataDetector';
+import { HeaderSecurityDetector } from '../detectors/passive/HeaderSecurityDetector';
+import { CookieSecurityDetector } from '../detectors/passive/CookieSecurityDetector';
+import { InsecureTransmissionDetector } from '../detectors/passive/InsecureTransmissionDetector';
 import { ActiveScanner } from '../scanners/active/ActiveScanner';
+import { PassiveScanner } from '../scanners/passive/PassiveScanner';
 import { ScanConfiguration } from '../types/config';
 import { AggressivenessLevel, AuthType, BrowserType, LogLevel, ReportFormat, VerbosityLevel } from '../types/enums';
 
@@ -21,6 +26,9 @@ program
   .option('-f, --formats <list>', 'Comma-separated report formats (console,json,html,sarif)', 'console,json,html')
   .option('--headless', 'Run headless browser', true)
   .option('--parallel <n>', 'Parallel scanners', '2')
+  .option('--passive', 'Enable passive scanning (network interception, headers, cookies)')
+  .option('--active', 'Enable active scanning (payload injection, fuzzing)', true)
+  .option('--scan-type <type>', 'Scan type: active, passive, or both', 'active')
   .action(async (url: string | undefined, options: any) => {
     const configManager = ConfigurationManager.getInstance();
     let config: ScanConfiguration;
@@ -68,6 +76,11 @@ program
         .map((s: string) => s.trim().toLowerCase())
         .map((s: string) => s as unknown as ReportFormat);
 
+      // Determine which scanners to enable based on flags
+      const scanType = options.scanType?.toLowerCase() || 'active';
+      const enablePassive = options.passive || scanType === 'passive' || scanType === 'both';
+      const enableActive = options.active !== false && (scanType === 'active' || scanType === 'both');
+
       config = {
         target: {
           url,
@@ -77,9 +90,9 @@ program
           timeout: 30000,
         },
         scanners: {
-          passive: { enabled: false },
+          passive: { enabled: enablePassive },
           active: {
-            enabled: true,
+            enabled: enableActive,
             aggressiveness: AggressivenessLevel.MEDIUM,
             submitForms: true,
           },
@@ -110,15 +123,28 @@ program
 
     const engine = new ScanEngine();
 
-    // Prepare ActiveScanner with default detectors
-    const active = new ActiveScanner();
-    active.registerDetectors([
-      new SqlInjectionDetector(),
-      new XssDetector(),
-      new ErrorBasedDetector(),
-    ]);
+    // Register scanners based on configuration
+    if (config.scanners.active?.enabled) {
+      const active = new ActiveScanner();
+      active.registerDetectors([
+        new SqlInjectionDetector(),
+        new XssDetector(),
+        new ErrorBasedDetector(),
+      ]);
+      engine.registerScanner(active);
+    }
 
-    engine.registerScanner(active);
+    if (config.scanners.passive?.enabled) {
+      const passive = new PassiveScanner();
+      passive.registerDetectors([
+        new SensitiveDataDetector(),
+        new HeaderSecurityDetector(),
+        new CookieSecurityDetector(),
+        new InsecureTransmissionDetector(),
+      ]);
+      engine.registerScanner(passive);
+    }
+
     await engine.loadConfiguration(config);
     await engine.scan();
     await engine.cleanup();
