@@ -3,8 +3,9 @@
  * Types for Active Verification system to reduce false positives/negatives
  */
 
-import { Vulnerability } from './vulnerability';
 import type { JsonDiffResult, EncodingInfo, ErrorMatchResult } from '../utils/helpers/response-comparison';
+
+import { Vulnerability } from './vulnerability';
 
 /**
  * Verification level determines how thorough the confirmation process is

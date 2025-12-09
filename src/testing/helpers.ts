@@ -22,6 +22,7 @@
  * ```
  */
 import { Page } from 'playwright';
+
 import { ScanEngine } from '../core/engine/ScanEngine';
 import { ErrorBasedDetector } from '../detectors/active/ErrorBasedDetector';
 import { SqlInjectionDetector } from '../detectors/active/SqlInjectionDetector';
@@ -140,6 +141,7 @@ export async function runActiveSecurityScan(
     },
     detectors: {
       enabled: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       sensitivity: 'normal' as any,
     },
     browser: {
@@ -252,6 +254,7 @@ export async function runPassiveSecurityScan(
     },
     detectors: {
       enabled: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       sensitivity: 'normal' as any,
     },
     browser: {

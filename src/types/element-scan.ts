@@ -1,4 +1,5 @@
 import { AttackSurfaceType, InjectionContext } from '../scanners/active/DomExplorer';
+
 import { VulnerabilityCategory } from './enums';
 import { PageAuthConfig, PageAction } from './page-scan';
 
@@ -21,7 +22,7 @@ export interface ElementTarget {
   /** Default value to start from when injecting */
   value?: string;
   /** Additional metadata (e.g., formAction, method, api url) */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   /** Optional HTTP method for API/JSON targets */
   method?: string;
   /** Enable/disable this target (default: true) */

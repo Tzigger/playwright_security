@@ -6,14 +6,25 @@ import { ScanEngine } from '../core/engine/ScanEngine';
 import { ErrorBasedDetector } from '../detectors/active/ErrorBasedDetector';
 import { SqlInjectionDetector } from '../detectors/active/SqlInjectionDetector';
 import { XssDetector } from '../detectors/active/XssDetector';
-import { SensitiveDataDetector } from '../detectors/passive/SensitiveDataDetector';
-import { HeaderSecurityDetector } from '../detectors/passive/HeaderSecurityDetector';
 import { CookieSecurityDetector } from '../detectors/passive/CookieSecurityDetector';
+import { HeaderSecurityDetector } from '../detectors/passive/HeaderSecurityDetector';
 import { InsecureTransmissionDetector } from '../detectors/passive/InsecureTransmissionDetector';
+import { SensitiveDataDetector } from '../detectors/passive/SensitiveDataDetector';
 import { ActiveScanner } from '../scanners/active/ActiveScanner';
 import { PassiveScanner } from '../scanners/passive/PassiveScanner';
 import { ScanConfiguration } from '../types/config';
 import { AggressivenessLevel, AuthType, BrowserType, LogLevel, ReportFormat, VerbosityLevel } from '../types/enums';
+
+interface CliOptions {
+  config?: string;
+  output?: string;
+  formats?: string;
+  headless?: boolean;
+  parallel?: string;
+  passive?: boolean;
+  active?: boolean;
+  scanType?: string;
+}
 
 const program = new Command();
 
@@ -30,7 +41,7 @@ program
   .option('--passive', 'Enable passive scanning (network interception, headers, cookies)')
   .option('--active', 'Enable active scanning (payload injection, fuzzing)', true)
   .option('--scan-type <type>', 'Scan type: active, passive, or both', 'active')
-  .action(async (url: string | undefined, options: any) => {
+  .action(async (url: string | undefined, options: CliOptions) => {
     const configManager = ConfigurationManager.getInstance();
     let config: ScanConfiguration;
 
@@ -40,12 +51,12 @@ program
         config = await configManager.loadFromFile(options.config);
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error(`Error loading configuration: ${error}`);
+        console.error(`Error loading configuration: ${String(error)}`);
         process.exit(1);
       }
       
       // CLI args override config file
-      const overrides: any = {};
+      const overrides: Partial<ScanConfiguration> = {};
       if (url) {
         overrides.target = { ...config.target, url };
       }
@@ -53,7 +64,7 @@ program
         overrides.reporting = { ...config.reporting, outputDir: options.output };
       }
       if (options.formats) {
-        const formats = String(options.formats)
+        const formats = options.formats
           .split(',')
           .map((s: string) => s.trim().toLowerCase()) as ReportFormat[];
         overrides.reporting = { ...config.reporting, ...overrides.reporting, formats };
@@ -72,7 +83,7 @@ program
         process.exit(1);
       }
 
-      const formats = String(options.formats)
+      const formats = (options.formats || 'console,json,html')
         .split(',')
         .map((s: string) => s.trim().toLowerCase())
         .map((s: string) => s as unknown as ReportFormat);
@@ -91,15 +102,16 @@ program
           timeout: 30000,
         },
         scanners: {
-          passive: { enabled: enablePassive },
+          passive: { enabled: !!enablePassive },
           active: {
-            enabled: enableActive,
+            enabled: !!enableActive,
             aggressiveness: AggressivenessLevel.MEDIUM,
             submitForms: true,
           },
         },
         detectors: {
           enabled: [],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
           sensitivity: 'normal' as any,
         },
         browser: {
@@ -110,11 +122,11 @@ program
         },
         reporting: {
           formats: formats,
-          outputDir: options.output,
+          outputDir: options.output || 'reports',
           verbosity: VerbosityLevel.NORMAL,
         },
         advanced: {
-          parallelism: parseInt(options.parallel, 10) || 2,
+          parallelism: parseInt(options.parallel || '2', 10) || 2,
           logLevel: LogLevel.INFO,
         },
       };

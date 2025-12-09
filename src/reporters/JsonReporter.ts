@@ -7,7 +7,7 @@ import { ScanResult } from '../types/scan-result';
 import { BaseReporter } from './base/IReporter';
 
 export class JsonReporter extends BaseReporter {
-  getFormat() {
+  getFormat(): ReportFormat {
     return ReportFormat.JSON;
   }
 

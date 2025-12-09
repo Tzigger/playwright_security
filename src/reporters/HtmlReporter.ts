@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import Handlebars from 'handlebars';
 
+import { ScanConfiguration } from '../types/config';
 import { ReportFormat } from '../types/enums';
 import { ScanResult } from '../types/scan-result';
 
@@ -11,11 +12,11 @@ import { BaseReporter } from './base/IReporter';
 export class HtmlReporter extends BaseReporter {
   private template?: Handlebars.TemplateDelegate;
 
-  getFormat() {
+  getFormat(): ReportFormat {
     return ReportFormat.HTML;
   }
 
-  override async init(config: any, options: any): Promise<void> {
+  override async init(config: ScanConfiguration, options: unknown): Promise<void> {
     await super.init(config, options);
     const tplPath = path.join(__dirname, 'templates', 'report.hbs');
     let source: string;

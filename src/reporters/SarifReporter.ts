@@ -7,7 +7,7 @@ import { ScanResult } from '../types/scan-result';
 import { BaseReporter } from './base/IReporter';
 
 export class SarifReporter extends BaseReporter {
-  getFormat() {
+  getFormat(): ReportFormat {
     return ReportFormat.SARIF;
   }
 
@@ -23,9 +23,9 @@ export class SarifReporter extends BaseReporter {
     await fs.promises.writeFile(outPath, JSON.stringify(sarif, null, 2), 'utf-8');
   }
 
-  private toSarif(result: ScanResult) {
+  private toSarif(result: ScanResult): Record<string, unknown> {
     const toolName = 'kinetic';
-    const rulesMap: Record<string, any> = {};
+    const rulesMap: Record<string, unknown> = {};
     const results = result.vulnerabilities.map((v, idx) => {
       const ruleId = v.cwe || v.category || `VULN-${idx}`;
       if (!rulesMap[ruleId]) {
@@ -69,7 +69,7 @@ export class SarifReporter extends BaseReporter {
     };
   }
 
-  private severityToSarif(sev: any): 'error' | 'warning' | 'note' {
+  private severityToSarif(sev: unknown): 'error' | 'warning' | 'note' {
     if (sev === 'critical' || sev === 'high') return 'error';
     if (sev === 'medium') return 'warning';
     return 'note';
