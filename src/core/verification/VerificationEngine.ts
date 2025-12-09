@@ -134,6 +134,7 @@ export class VerificationEngine {
           verifier, vulnerability, page, config
         );
         attempts.push(attemptResult);
+        totalConfidence += attemptResult.confidence;
 
         if (attemptResult.success) {
           this.logger.debug(`Verification technique ${verifier.name} succeeded`);

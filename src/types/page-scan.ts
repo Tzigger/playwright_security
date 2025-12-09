@@ -21,7 +21,7 @@ export interface PageTarget {
   description?: string;
   
   /** Specific vulnerability categories to test on this page */
-  testCategories?: VulnerabilityCategory[];
+  testCategories?: ReadonlyArray<VulnerabilityCategory>;
   
   /** Whether to fill forms before testing (default: true) */
   fillForms?: boolean;
@@ -74,6 +74,22 @@ export interface PageAction {
 }
 
 /**
+ * Convenience authentication config for bWAPP
+ */
+export interface BwappAuthConfig {
+  /** Username for bWAPP (default: bee) */
+  username?: string;
+  /** Password for bWAPP (default: bug) */
+  password?: string;
+  /** Security level value (0=low, 1=medium, 2=high) */
+  securityLevel?: string;
+  /** Login page path (default: /login.php) */
+  loginUrl?: string;
+  /** Portal path used to verify successful login (default: /portal.php) */
+  portalPath?: string;
+}
+
+/**
  * Configuration for page vulnerability scan
  */
 export interface PageScanConfig {
@@ -100,6 +116,9 @@ export interface PageScanConfig {
   
   /** Authentication to perform before page scans */
   authentication?: PageAuthConfig;
+
+  /** Built-in bWAPP authentication helper */
+  bwappAuth?: BwappAuthConfig;
 }
 
 /**
@@ -214,71 +233,4 @@ export const CommonPagePatterns = {
     { url: '/order', name: 'Order Page' },
   ],
   
-  /** Juice Shop specific pages */
-  JUICE_SHOP_PAGES: [
-    { url: '/#/login', name: 'Juice Shop Login' },
-    { url: '/#/register', name: 'Juice Shop Register' },
-    { url: '/#/forgot-password', name: 'Juice Shop Forgot Password' },
-    { url: '/#/search', name: 'Juice Shop Search' },
-    { url: '/#/contact', name: 'Juice Shop Contact' },
-    { url: '/#/complain', name: 'Juice Shop Complaint' },
-    { url: '/#/basket', name: 'Juice Shop Basket' },
-    { url: '/#/address/select', name: 'Juice Shop Address' },
-    { url: '/#/recycle', name: 'Juice Shop Recycle' },
-    { url: '/#/track-result', name: 'Juice Shop Order Tracking' },
-  ],
 } as const;
-
-/**
- * Juice Shop page configurations with pre-actions
- */
-export const JuiceShopPages: PageTarget[] = [
-  {
-    url: '/#/login',
-    name: 'Login Page',
-    description: 'Main login page with email/password fields',
-    fillForms: true,
-    formValues: {
-      'email': "test@test.com' OR '1'='1",
-      'password': 'test123',
-    },
-    preActions: [
-      { type: 'dismiss-dialog', description: 'Close welcome dialog' },
-    ],
-  },
-  {
-    url: '/#/register',
-    name: 'Registration Page',
-    description: 'User registration with multiple input fields',
-    fillForms: true,
-    formValues: {
-      'emailControl': '<script>alert("xss")</script>@test.com',
-      'passwordControl': 'Test1234!',
-      'repeatPasswordControl': 'Test1234!',
-      'securityQuestion': '1',
-      'securityAnswer': "<img src=x onerror='alert(1)'>",
-    },
-  },
-  {
-    url: '/#/forgot-password',
-    name: 'Forgot Password Page',
-    description: 'Password reset with security question',
-    fillForms: true,
-  },
-  {
-    url: '/#/search?q=test',
-    name: 'Search Page',
-    description: 'Product search - potential XSS vector',
-    testCategories: ['xss' as VulnerabilityCategory],
-  },
-  {
-    url: '/#/contact',
-    name: 'Contact Page',
-    description: 'Contact form - multiple input vectors',
-  },
-  {
-    url: '/#/complain',
-    name: 'Complaint Page',
-    description: 'File upload and complaint submission',
-  },
-];

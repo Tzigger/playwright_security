@@ -13,7 +13,7 @@ import { PageScanner } from '../src/scanners/active/PageScanner';
 import { SqlInjectionDetector } from '../src/detectors/active/SqlInjectionDetector';
 import { XssDetector } from '../src/detectors/active/XssDetector';
 import { InjectionDetector } from '../src/detectors/active/InjectionDetector';
-import { PageScanConfig, JuiceShopPages } from '../src/types/page-scan';
+import { PageScanConfig, PageTarget } from '../src/types/page-scan';
 import { Vulnerability } from '../src/types/vulnerability';
 import { Logger } from '../src/utils/logger/Logger';
 import { 
@@ -29,9 +29,18 @@ const JUICE_SHOP_URL = 'http://localhost:3000';
 /**
  * Juice Shop page scan configuration
  */
+const juiceShopPages: PageTarget[] = [
+  { url: '/#/login', name: 'Login Page' },
+  { url: '/#/register', name: 'Registration Page' },
+  { url: '/#/forgot-password', name: 'Forgot Password Page' },
+  { url: '/#/search', name: 'Search Page' },
+  { url: '/#/contact', name: 'Contact Page' },
+  { url: '/#/complain', name: 'Complaint Page' },
+];
+
 const juiceShopConfig: PageScanConfig = {
   baseUrl: JUICE_SHOP_URL,
-  pages: JuiceShopPages,
+  pages: juiceShopPages,
   pageTimeout: 30000,
   delayBetweenPages: 1000,
   continueOnError: true,

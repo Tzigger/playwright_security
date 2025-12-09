@@ -1,10 +1,64 @@
 import { Page } from 'playwright';
 import { IActiveDetector, ActiveDetectorContext } from '../../core/interfaces/IActiveDetector';
 import { Vulnerability } from '../../types/vulnerability';
-import { VulnerabilitySeverity, VulnerabilityCategory } from '../../types/enums';
+import { VulnerabilitySeverity, VulnerabilityCategory, LogLevel } from '../../types/enums';
 import { AttackSurface, InjectionContext, AttackSurfaceType } from '../../scanners/active/DomExplorer';
 import { PayloadInjector, InjectionResult, PayloadEncoding } from '../../scanners/active/PayloadInjector';
 import { getOWASP2025Category } from '../../utils/cwe/owasp-2025-mapping';
+import { Logger } from '../../utils/logger/Logger';
+import { SQL_ERROR_PATTERNS, categorizeError, findErrorPatterns } from '../../utils/patterns/error-patterns';
+
+interface TechniqueTimeouts {
+  authBypass: number;
+  errorBased: number;
+  booleanBased: number;
+  timeBased: number;
+}
+
+interface SqlInjectionDetectorConfig {
+  techniqueTimeouts?: Partial<TechniqueTimeouts>;
+  skipRedundantTests?: boolean;
+  allowDuplicatePayloads?: boolean;
+  minConfidenceForEarlyExit?: number;
+  enableAuthBypass?: boolean;
+  enableErrorBased?: boolean;
+  enableBooleanBased?: boolean;
+  enableTimeBased?: boolean;
+  maxSurfacesPerPage?: number;
+  skipTimeBasedWhenErrorBasedSucceeds?: boolean;
+}
+
+type ResolvedSqlInjectionDetectorConfig = Required<
+  Omit<SqlInjectionDetectorConfig, 'techniqueTimeouts'>
+> & {
+  techniqueTimeouts: TechniqueTimeouts;
+};
+
+interface SqlDetectorStats {
+  surfacesTested: number;
+  timeouts: number;
+  vulnsFound: number;
+  attempts: Record<SqlInjectionTechnique, number> & { authBypass: number };
+  timeoutsByTechnique: Record<SqlInjectionTechnique, number> & { authBypass: number };
+}
+
+const DEFAULT_SQLI_DETECTOR_CONFIG: ResolvedSqlInjectionDetectorConfig = {
+  techniqueTimeouts: {
+    authBypass: 8000,
+    errorBased: 12000,
+    booleanBased: 15000,
+    timeBased: 25000,
+  },
+  skipRedundantTests: true,
+  allowDuplicatePayloads: false,
+  minConfidenceForEarlyExit: 0.9,
+  enableAuthBypass: true,
+  enableErrorBased: true,
+  enableBooleanBased: true,
+  enableTimeBased: true,
+  maxSurfacesPerPage: 4,
+  skipTimeBasedWhenErrorBasedSucceeds: true,
+};
 
 /**
  * SQL Injection Detection Techniques
@@ -27,27 +81,81 @@ export class SqlInjectionDetector implements IActiveDetector {
   readonly version = '1.0.0';
 
   private injector: PayloadInjector;
+  private logger: Logger;
+  private stats: SqlDetectorStats = {
+    surfacesTested: 0,
+    timeouts: 0,
+    vulnsFound: 0,
+    attempts: {
+      authBypass: 0,
+      [SqlInjectionTechnique.ERROR_BASED]: 0,
+      [SqlInjectionTechnique.BOOLEAN_BASED]: 0,
+      [SqlInjectionTechnique.TIME_BASED]: 0,
+      [SqlInjectionTechnique.UNION_BASED]: 0,
+      [SqlInjectionTechnique.STACKED_QUERIES]: 0,
+    },
+    timeoutsByTechnique: {
+      authBypass: 0,
+      [SqlInjectionTechnique.ERROR_BASED]: 0,
+      [SqlInjectionTechnique.BOOLEAN_BASED]: 0,
+      [SqlInjectionTechnique.TIME_BASED]: 0,
+      [SqlInjectionTechnique.UNION_BASED]: 0,
+      [SqlInjectionTechnique.STACKED_QUERIES]: 0,
+    },
+  };
+  private config: ResolvedSqlInjectionDetectorConfig;
+  private testedPayloads: Map<string, Set<string>> = new Map();
 
-  constructor() {
+  constructor(config: SqlInjectionDetectorConfig = {}) {
     this.injector = new PayloadInjector();
+    this.logger = new Logger(LogLevel.INFO, 'SqlInjectionDetector');
+    this.config = this.mergeConfig(DEFAULT_SQLI_DETECTOR_CONFIG, config);
+  }
+
+  public updateConfig(config: Partial<SqlInjectionDetectorConfig>): void {
+    this.config = this.mergeConfig(this.config, config);
+  }
+
+  private mergeConfig(
+    base: ResolvedSqlInjectionDetectorConfig,
+    overrides: Partial<SqlInjectionDetectorConfig>
+  ): ResolvedSqlInjectionDetectorConfig {
+    return {
+      ...base,
+      ...overrides,
+      techniqueTimeouts: { ...base.techniqueTimeouts, ...(overrides.techniqueTimeouts ?? {}) },
+    };
+  }
+
+  public setTechniqueTimeout(technique: SqlInjectionTechnique | 'auth-bypass', timeout: number): void {
+    if (technique === SqlInjectionTechnique.ERROR_BASED) this.config.techniqueTimeouts.errorBased = timeout;
+    if (technique === SqlInjectionTechnique.BOOLEAN_BASED) this.config.techniqueTimeouts.booleanBased = timeout;
+    if (technique === SqlInjectionTechnique.TIME_BASED) this.config.techniqueTimeouts.timeBased = timeout;
+    if (technique === 'auth-bypass') this.config.techniqueTimeouts.authBypass = timeout;
   }
 
   /**
    * Helper: Run a promise with timeout
    */
   private async withTimeout<T>(
-    promise: Promise<T>, 
-    timeoutMs: number, 
-    label: string
+    promise: Promise<T>,
+    timeoutMs: number,
+    label: string,
+    statsKey?: keyof SqlDetectorStats['timeoutsByTechnique']
   ): Promise<T | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => {
-        console.log(`[SqlInjectionDetector] ${label} timed out after ${timeoutMs}ms`);
+      timer = setTimeout(() => {
+        this.logger.debug(`${label} timed out after ${timeoutMs}ms`);
+        this.stats.timeouts += 1;
+        if (statsKey) this.stats.timeoutsByTechnique[statsKey] += 1;
         resolve(null);
       }, timeoutMs);
     });
-    
-    return Promise.race([promise, timeoutPromise]);
+
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timer) clearTimeout(timer);
+    return result;
   }
 
   /**
@@ -56,94 +164,144 @@ export class SqlInjectionDetector implements IActiveDetector {
   async detect(context: ActiveDetectorContext): Promise<Vulnerability[]> {
     const vulnerabilities: Vulnerability[] = [];
     const { page, attackSurfaces, baseUrl } = context;
+    this.stats = {
+      surfacesTested: 0,
+      timeouts: 0,
+      vulnsFound: 0,
+      attempts: {
+        authBypass: 0,
+        [SqlInjectionTechnique.ERROR_BASED]: 0,
+        [SqlInjectionTechnique.BOOLEAN_BASED]: 0,
+        [SqlInjectionTechnique.TIME_BASED]: 0,
+        [SqlInjectionTechnique.UNION_BASED]: 0,
+        [SqlInjectionTechnique.STACKED_QUERIES]: 0,
+      },
+      timeoutsByTechnique: {
+        authBypass: 0,
+        [SqlInjectionTechnique.ERROR_BASED]: 0,
+        [SqlInjectionTechnique.BOOLEAN_BASED]: 0,
+        [SqlInjectionTechnique.TIME_BASED]: 0,
+        [SqlInjectionTechnique.UNION_BASED]: 0,
+        [SqlInjectionTechnique.STACKED_QUERIES]: 0,
+      },
+    };
+    this.testedPayloads.clear();
 
-    // Filter for SQL injection targets - include all form inputs, API params, and specific patterns
     const sqlTargets = attackSurfaces.filter((surface) => {
-      const nameLower = surface.name.toLowerCase();
-      
-      // Include form inputs that could be SQL injectable
-      const isFormInput = surface.type === AttackSurfaceType.FORM_INPUT;
-      const isApiParam = surface.type === AttackSurfaceType.API_PARAM;
-      const isJsonBody = surface.type === AttackSurfaceType.JSON_BODY;
-      const isUrlParam = surface.type === AttackSurfaceType.URL_PARAMETER;
-      
-      // Context-based inclusion
-      const isSqlContext = surface.context === InjectionContext.SQL;
-      const isJsonContext = surface.context === InjectionContext.JSON;
-      
-      // Name-based inclusion for SQL-injectable fields
-      const hasIdPattern = nameLower.includes('id');
-      const hasSearchPattern = nameLower.includes('search') || nameLower.includes('query') || nameLower.includes('q');
-      const hasAuthPattern = nameLower.includes('email') || nameLower.includes('user') || 
-                             nameLower.includes('login') || nameLower.includes('username');
-      const hasOrderPattern = nameLower.includes('order') || nameLower.includes('sort');
-      
-      // Skip non-injectable types
-      const skipTypes = ['checkbox', 'radio', 'submit', 'button', 'file', 'image'];
-      if (surface.metadata?.['inputType'] && skipTypes.includes(surface.metadata['inputType'] as string)) {
-        return false;
-      }
-      
-      return (isFormInput && (hasIdPattern || hasSearchPattern || hasAuthPattern || hasOrderPattern || isSqlContext)) ||
-             isApiParam || isJsonBody || isUrlParam || isSqlContext || isJsonContext;
+      const eligibleTypes = [
+        AttackSurfaceType.FORM_INPUT,
+        AttackSurfaceType.API_PARAM,
+        AttackSurfaceType.JSON_BODY,
+        AttackSurfaceType.URL_PARAMETER,
+      ];
+      return eligibleTypes.includes(surface.type);
     });
 
-    for (const surface of sqlTargets) {
+    const maxTargets = this.config.maxSurfacesPerPage ?? sqlTargets.length;
+    const prioritizedTargets = this.prioritizeTargets(sqlTargets).slice(0, maxTargets);
+
+    for (const surface of prioritizedTargets) {
+      this.testedPayloads.delete(this.getSurfaceKey(surface));
+      this.stats.surfacesTested += 1;
+      const surfaceStart = Date.now();
+      const surfaceFindings: Vulnerability[] = [];
       try {
-        // Priority 1: Test for Authentication Bypass (Login SQLi) - fastest and most impactful
-        if (
-          (surface.type === 'form-input' || surface.type === 'json-body' || surface.type === 'api-param') && 
-          (surface.name.includes('email') || surface.name.includes('user') || surface.name.includes('login'))
-        ) {
-           const authBypassVuln = await this.testAuthBypass(page, surface, baseUrl);
-           if (authBypassVuln) {
-             vulnerabilities.push(authBypassVuln);
-             continue; // Found vulnerability, skip other tests for this surface
-           }
-        }
-        
-        // Priority 2: Test error-based (quick response-based check)
-        const errorBasedVuln = await this.withTimeout(
-          this.testErrorBased(page, surface, baseUrl), 
-          15000, 
-          'testErrorBased'
-        );
-        if (errorBasedVuln) {
-          vulnerabilities.push(errorBasedVuln);
-          continue; // Found vulnerability, skip other tests
+        const techniqueOrder = this.getTechniqueOrder(surface);
+
+        for (const step of techniqueOrder) {
+          const stepStart = Date.now();
+          if (this.shouldSkipTechnique(step, surfaceFindings)) {
+            continue;
+          }
+          const enabled = this.isTechniqueEnabled(step);
+          if (!enabled) continue;
+
+          this.logTechniqueStart(step, surface);
+          let vuln: Vulnerability | null = null;
+
+          try {
+            if (step === 'auth-bypass') {
+              this.stats.attempts.authBypass += 1;
+              vuln = await this.testAuthBypass(page, surface, baseUrl);
+            } else if (step === SqlInjectionTechnique.ERROR_BASED) {
+              this.stats.attempts[SqlInjectionTechnique.ERROR_BASED] += 1;
+              vuln = await this.withTimeout(
+                this.testErrorBased(page, surface, baseUrl),
+                this.config.techniqueTimeouts.errorBased,
+                'testErrorBased',
+                SqlInjectionTechnique.ERROR_BASED
+              );
+            } else if (step === SqlInjectionTechnique.BOOLEAN_BASED) {
+              this.stats.attempts[SqlInjectionTechnique.BOOLEAN_BASED] += 1;
+              vuln = await this.withTimeout(
+                this.testBooleanBased(page, surface, baseUrl),
+                this.config.techniqueTimeouts.booleanBased,
+                'testBooleanBased',
+                SqlInjectionTechnique.BOOLEAN_BASED
+              );
+            } else if (step === SqlInjectionTechnique.TIME_BASED) {
+              this.stats.attempts[SqlInjectionTechnique.TIME_BASED] += 1;
+              vuln = await this.withTimeout(
+                this.testTimeBased(page, surface, baseUrl),
+                this.config.techniqueTimeouts.timeBased,
+                'testTimeBased',
+                SqlInjectionTechnique.TIME_BASED
+              );
+            }
+          } catch (error) {
+            this.logger.warn(`Error executing ${step} on ${surface.name}: ${error}`);
+          }
+
+          this.logTechniqueResult(step, Boolean(vuln), Date.now() - stepStart);
+
+          if (vuln) {
+            vulnerabilities.push(vuln);
+            surfaceFindings.push(vuln);
+            this.stats.vulnsFound += 1;
+            const confidence = (vuln.evidence as any)?.metadata?.confidence || 0;
+            if (this.config.skipRedundantTests && confidence >= this.config.minConfidenceForEarlyExit) {
+              break;
+            }
+            if (step === SqlInjectionTechnique.ERROR_BASED && this.config.skipTimeBasedWhenErrorBasedSucceeds && confidence >= this.config.minConfidenceForEarlyExit) {
+              break;
+            }
+            if (step === SqlInjectionTechnique.BOOLEAN_BASED && this.config.skipTimeBasedWhenErrorBasedSucceeds && confidence >= this.config.minConfidenceForEarlyExit) {
+              break;
+            }
+          }
         }
 
-        // Priority 3: Boolean-based (may take longer)
-        const booleanBasedVuln = await this.withTimeout(
-          this.testBooleanBased(page, surface, baseUrl),
-          20000,
-          'testBooleanBased'
-        );
-        if (booleanBasedVuln) {
-          vulnerabilities.push(booleanBasedVuln);
-          continue;
-        }
+        this.logger.info(`[SQLi] Surface: ${surface.name} (tested) - ${Date.now() - surfaceStart}ms, ${surfaceFindings.length ? 'VULN' : 'no'}`);
 
-        // Priority 4: Time-based (slowest - intentional delays)
-        // Skip time-based for form inputs on login pages (too slow)
-        if (surface.type !== 'form-input') {
-          const timeBasedVuln = await this.withTimeout(
-            this.testTimeBased(page, surface, baseUrl),
-            30000,
-            'testTimeBased'
-          );
-          if (timeBasedVuln) vulnerabilities.push(timeBasedVuln);
-        }
-
-        // Skip UNION-based for now (complex, many payloads)
-        // const unionBasedVuln = await this.testUnionBased(page, surface, baseUrl);
-        
       } catch (error) {
-        console.error(`Error testing SQL injection on ${surface.name}:`, error);
+        this.logger.warn(`Error testing SQL injection on ${surface.name}: ${error}`);
       }
     }
 
+    this.logger.info(`SQLi stats: ${this.stats.vulnsFound} found, ${this.stats.timeouts} timeouts`);
     return vulnerabilities;
+  }
+
+  private prioritizeTargets(surfaces: AttackSurface[]): AttackSurface[] {
+    return surfaces
+      .map((surface) => ({ surface, score: this.scoreSurface(surface) }))
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.surface);
+  }
+
+  private scoreSurface(surface: AttackSurface): number {
+    let score = 0;
+    const nameLower = surface.name.toLowerCase();
+    const inputType = String(surface.metadata?.['inputType'] || '').toLowerCase();
+
+    if (['title', 'search', 'query', 'id', 'user'].some((key) => nameLower.includes(key))) score += 10;
+    if (inputType === 'text' || inputType === 'password') score += 5;
+    if (['checkbox', 'radio', 'submit', 'button', 'file', 'image'].includes(inputType)) score -= 5;
+
+    if (surface.context === InjectionContext.SQL || surface.context === InjectionContext.JSON) score += 5;
+    if (surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY) score += 3;
+
+    return score;
   }
 
   /**
@@ -154,9 +312,10 @@ export class SqlInjectionDetector implements IActiveDetector {
       "' OR 1=1--",
       "' OR '1'='1",
       "admin' --",
-      "admin' #",
       "' OR true--"
     ];
+
+    const deadline = Date.now() + this.config.techniqueTimeouts.authBypass;
 
     // Pre-fill password field with dummy value
     try {
@@ -167,15 +326,24 @@ export class SqlInjectionDetector implements IActiveDetector {
     } catch (e) { /* ignore */ }
 
     for (const payload of payloads) {
+      if (Date.now() > deadline) {
+        this.stats.timeouts += 1;
+        this.stats.timeoutsByTechnique.authBypass += 1;
+        break;
+      }
+
+      if (!this.shouldTestPayload(surface, payload)) {
+        continue;
+      }
+
+      const remaining = Math.max(0, deadline - Date.now());
       const beforeUrl = page.url();
       let apiResponse: any = null;
 
-      // Setup listener for login API response
       const responseListener = async (response: any) => {
         const url = response.url();
         if (url.includes('/login') && response.request().method() === 'POST') {
           try {
-            // Skip redirect responses (3xx status codes)
             if (response.status() >= 300 && response.status() < 400) {
               return;
             }
@@ -184,51 +352,43 @@ export class SqlInjectionDetector implements IActiveDetector {
             try {
               apiResponse = await response.text();
             } catch (textError) {
-              // Response body unavailable (e.g., redirect), skip
               return;
             }
           }
         }
       };
-      page.on('response', responseListener);
 
-      // Use Promise.race to add timeout
-      const injectPromise = this.injector.inject(page, surface, payload, {
-        encoding: PayloadEncoding.NONE,
-        submit: true,
-        baseUrl,
-      });
-      
-      const timeoutPromise = new Promise<any>((_, reject) => 
-        setTimeout(() => reject(new Error('Injection timeout')), 10000)
-      );
-      
-      let result;
+      page.on('response', responseListener);
+      let result: InjectionResult | null = null;
+
       try {
-        result = await Promise.race([injectPromise, timeoutPromise]);
+        result = await this.withTimeout(
+          this.injector.inject(page, surface, payload, {
+            encoding: PayloadEncoding.NONE,
+            submit: true,
+            baseUrl,
+          }),
+          remaining,
+          'auth-bypass-inject',
+          'authBypass'
+        );
+
+        await page.waitForTimeout(500);
       } catch (e) {
+        result = null;
+      } finally {
         page.off('response', responseListener);
-        continue; // Try next payload
       }
 
-      // Wait briefly for response listener to capture the response
-      await page.waitForTimeout(500);
-      
-      page.off('response', responseListener);
+      if (!result) {
+        continue;
+      }
 
       // Check 1: URL Redirect
       const afterUrl = page.url();
-      const isRedirected = afterUrl !== beforeUrl && !afterUrl.includes('login');
+      const success = await this.detectAuthenticationSuccess(page, apiResponse, beforeUrl, afterUrl);
 
-      // Check 2: API Success (Token)
-      const apiBody = JSON.stringify(apiResponse || {});
-      const hasToken = apiBody.includes('token') || apiBody.includes('jwt') || apiBody.includes('"authentication":{');
-
-      // Check 3: UI State Change (Logout button, Basket, etc.)
-      const pageContent = await page.content();
-      const isLoggedIn = pageContent.includes('Logout') || pageContent.includes('Your Basket') || pageContent.includes('account-name');
-
-      if (isRedirected || hasToken || isLoggedIn) {
+      if (success.isAuthenticated) {
          const cwe = 'CWE-89';
          const owasp = getOWASP2025Category(cwe) || 'A03:2021';
 
@@ -242,12 +402,24 @@ export class SqlInjectionDetector implements IActiveDetector {
             owasp,
             url: result.response?.url || baseUrl,
             evidence: {
-              request: { body: payload },
-              response: { 
-                body: apiBody.substring(0, 500),
-                status: result.response?.status 
+              request: {
+                body: payload,
+                url: surface.metadata?.url || baseUrl,
+                method: (surface.metadata?.['method'] as string) || 'POST',
               },
-              description: `Login successful. Token found: ${hasToken}, Redirect: ${isRedirected}, UI Change: ${isLoggedIn}`
+              response: { 
+                body: JSON.stringify(apiResponse || {}).substring(0, 500),
+                status: result.response?.status,
+                headers: result.response?.headers,
+              },
+              metadata: {
+                technique: 'auth-bypass',
+                confidence: success.confidence,
+                indicators: success.indicators,
+                evidence: await this.extractAuthenticationEvidence(page, apiResponse),
+                verificationStatus: 'unverified',
+              },
+              description: `Login successful. Indicators: ${success.indicators.join(', ')}`
             },
             remediation: 'Use parameterized queries for all authentication logic. Validate input types. Do not concatenate user input into SQL queries.',
             references: ['https://owasp.org/www-community/attacks/SQL_Injection'],
@@ -262,29 +434,23 @@ export class SqlInjectionDetector implements IActiveDetector {
    * Test for error-based SQL injection
    */
   private async testErrorBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const payloads = [
-      "'", // Single quote
-      "''", // Double single quote
-      "' OR '1'='1", // Classic OR injection
-      "' OR 1=1--", // Comment-based
-      "' OR 'a'='a", // Always true
-      "' UNION SELECT NULL--", // Union attempt
-      "' AND 1=0 UNION ALL SELECT 'admin', 'password'--", // Advanced union
-      "' WAITFOR DELAY '0:0:5'--", // Time-based SQL Server
-      "'; DROP TABLE users--", // Destructive (testing detection, not actual execution)
-      "1' AND '1'='1", // Numeric with string
-      "1 AND 1=1", // Numeric boolean
-    ];
+    const payloads = this.getUniquePayloads(surface, this.getContextualPayloads(surface, SqlInjectionTechnique.ERROR_BASED));
 
     const results = await this.injector.injectMultiple(page, surface, payloads, {
       encoding: PayloadEncoding.NONE,
       submit: true,
       baseUrl,
+      delayMs: 100,
+      maxConcurrent: 1,
     });
 
     for (const result of results) {
-      if (this.hasSqlError(result)) {
-        return this.createVulnerability(surface, result, SqlInjectionTechnique.ERROR_BASED, baseUrl);
+      const errorInfo = this.hasSqlError(result);
+      if (errorInfo.hasError) {
+        return this.createVulnerability(surface, result, SqlInjectionTechnique.ERROR_BASED, baseUrl, {
+          matchedPatterns: errorInfo.patterns,
+          confidence: this.getTechniqueConfidence(SqlInjectionTechnique.ERROR_BASED),
+        });
       }
     }
 
@@ -295,34 +461,38 @@ export class SqlInjectionDetector implements IActiveDetector {
    * Test for boolean-based blind SQL injection
    */
   private async testBooleanBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    // Test true vs false conditions with context-aware payloads
-    const isNumeric = this.isNumericContext(surface);
-    
-    const truePayloads = isNumeric 
-      ? ["1 OR 1=1", "1 OR 'a'='a", "1) OR (1=1"]
-      : ["' OR '1'='1", "' OR 'a'='a", "') OR ('1'='1"];
-      
-    const falsePayloads = isNumeric
-      ? ["1 AND 1=0", "1 AND 'a'='b", "1) AND (1=0"]
-      : ["' AND '1'='2", "' AND 'a'='b", "') AND ('1'='2"];
+    const { truePayloads, falsePayloads } = this.getBooleanPayloads(surface);
+    const filteredTrue = this.getUniquePayloads(surface, truePayloads);
+    const filteredFalse = this.getUniquePayloads(surface, falsePayloads);
 
-    const trueResults = await this.injector.injectMultiple(page, surface, truePayloads, {
+    const trueResults = await this.injector.injectMultiple(page, surface, filteredTrue, {
       encoding: PayloadEncoding.NONE,
       submit: true,
       baseUrl,
+      delayMs: 100,
+      maxConcurrent: 1,
     });
 
-    const falseResults = await this.injector.injectMultiple(page, surface, falsePayloads, {
+    const falseResults = await this.injector.injectMultiple(page, surface, filteredFalse, {
       encoding: PayloadEncoding.NONE,
       submit: true,
       baseUrl,
+      delayMs: 100,
+      maxConcurrent: 1,
     });
+
+    if (!trueResults.length || !falseResults.length) {
+      return null;
+    }
 
     // JSON-aware comparison for API endpoints
     if (this.isJsonResponse(trueResults[0]) || surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY) {
       const jsonDiff = this.compareJsonResponses(trueResults, falseResults);
       if (jsonDiff.isSignificant && trueResults[0]) {
-        return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl);
+        return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl, {
+          jsonDiff,
+          confidence: Math.max(jsonDiff.confidence, this.getTechniqueConfidence(SqlInjectionTechnique.BOOLEAN_BASED)),
+        });
       }
     }
 
@@ -337,7 +507,9 @@ export class SqlInjectionDetector implements IActiveDetector {
     const threshold = Math.max(avgTrueLength, avgFalseLength) * 0.1;
 
     if (diff > threshold && diff > 100 && trueResults[0]) {
-      return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl);
+      return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl, {
+        confidence: this.getTechniqueConfidence(SqlInjectionTechnique.BOOLEAN_BASED),
+      });
     }
 
     return null;
@@ -347,25 +519,16 @@ export class SqlInjectionDetector implements IActiveDetector {
    * Test for time-based blind SQL injection
    */
   private async testTimeBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    // Measure baseline (no payload) - retry 2 times for accuracy
     let baselineTime = 0;
-    for (let i = 0; i < 2; i++) {
-      const baselineStart = Date.now();
-      await this.injector.inject(page, surface, surface.value || '', {
-        encoding: PayloadEncoding.NONE,
-        submit: true,
-        baseUrl,
-      });
-      baselineTime += Date.now() - baselineStart;
-    }
-    baselineTime = baselineTime / 2; // Average
+    const baselineStart = Date.now();
+    await this.injector.inject(page, surface, surface.value || '', {
+      encoding: PayloadEncoding.NONE,
+      submit: true,
+      baseUrl,
+    });
+    baselineTime += Date.now() - baselineStart;
 
-    const timePayloads = [
-      "1' AND SLEEP(2)--", // MySQL - reduced to 2s
-      "1'; WAITFOR DELAY '0:0:2'--", // SQL Server
-      "1'||pg_sleep(2)--", // PostgreSQL
-      "' AND SLEEP(2)--", // String context
-    ];
+    const timePayloads = this.getUniquePayloads(surface, this.getContextualPayloads(surface, SqlInjectionTechnique.TIME_BASED));
 
     for (const payload of timePayloads) {
       const startTime = Date.now();
@@ -378,128 +541,16 @@ export class SqlInjectionDetector implements IActiveDetector {
 
       // Compare to baseline: if >2x baseline AND >2s absolute, likely SQLi
       if (duration > baselineTime * 2 && duration > 2000) {
-        return this.createVulnerability(surface, result, SqlInjectionTechnique.TIME_BASED, baseUrl);
+        return this.createVulnerability(surface, result, SqlInjectionTechnique.TIME_BASED, baseUrl, {
+          timing: duration,
+          confidence: this.getTechniqueConfidence(SqlInjectionTechnique.TIME_BASED),
+        });
       }
     }
 
     return null;
   }
 
-  /**
-   * Test for UNION-based SQL injection
-   */
-  private async testUnionBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const unionPayloads = [
-      "' UNION SELECT NULL--",
-      "' UNION SELECT NULL,NULL--",
-      "' UNION SELECT NULL,NULL,NULL--",
-      "' UNION SELECT 'a',NULL,NULL--",
-      "' UNION ALL SELECT table_name,NULL,NULL FROM information_schema.tables--",
-      "1' UNION SELECT username,password,NULL FROM users--",
-    ];
-
-    const results = await this.injector.injectMultiple(page, surface, unionPayloads, {
-      encoding: PayloadEncoding.NONE,
-      submit: true,
-      baseUrl,
-    });
-
-    for (const result of results) {
-      // Check for UNION success indicators
-      if (
-        result.response?.body?.includes('table_name') ||
-        result.response?.body?.includes('username') ||
-        result.response?.body?.includes('password') ||
-        (result.response?.status === 200 && result.response?.body && result.response.body.length > 1000)
-      ) {
-        return this.createVulnerability(surface, result, SqlInjectionTechnique.UNION_BASED, baseUrl);
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * API boolean-based SQLi for JSON bodies and query params
-   * Compares response bodies/status for true vs false conditions
-   */
-  private async testApiBooleanBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const isApiSurface = surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY;
-    if (!isApiSurface) return null;
-
-    const isNumeric = this.isNumericContext(surface);
-    const truePayloads = isNumeric ? ["1 OR 1=1", "1 OR 'a'='a'"] : ["' OR '1'='1", "' OR 'a'='a'"];
-    const falsePayloads = isNumeric ? ["1 AND 1=0", "1 AND 'a'='b'"] : ["' AND '1'='2", "' AND 'a'='b'"];
-
-    const trueResults = await this.injector.injectMultiple(page, surface, truePayloads, {
-      encoding: PayloadEncoding.NONE,
-      submit: true,
-      baseUrl,
-    });
-
-    const falseResults = await this.injector.injectMultiple(page, surface, falsePayloads, {
-      encoding: PayloadEncoding.NONE,
-      submit: true,
-      baseUrl,
-    });
-
-    // Simple comparison: check body length differences
-    const trueLengths = trueResults.map((r) => r.response?.body?.length || 0);
-    const falseLengths = falseResults.map((r) => r.response?.body?.length || 0);
-
-    const avgTrueLength = trueLengths.reduce((a, b) => a + b, 0) / trueLengths.length;
-    const avgFalseLength = falseLengths.reduce((a, b) => a + b, 0) / falseLengths.length;
-
-    const diff = Math.abs(avgTrueLength - avgFalseLength);
-    const threshold = Math.max(avgTrueLength, avgFalseLength) * 0.1;
-
-    if (diff > threshold && diff > 100 && trueResults[0]) {
-      return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl);
-    }
-
-    return null;
-  }
-
-  /**
-   * API time-based SQLi for JSON bodies and query params
-   * Measures response delays when using sleep/delay payloads
-   */
-  private async testApiTimeBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const isApiSurface = surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY;
-    if (!isApiSurface) return null;
-
-    // Baseline measurement - average of 2 runs
-    let baselineTime = 0;
-    for (let i = 0; i < 2; i++) {
-      const baselineStart = Date.now();
-      await this.injector.inject(page, surface, surface.value || '', { encoding: PayloadEncoding.NONE, submit: true, baseUrl });
-      baselineTime += Date.now() - baselineStart;
-    }
-    baselineTime = baselineTime / 2;
-
-    const timePayloads = [
-      "1' AND SLEEP(2)--",
-      "' AND SLEEP(2)--",
-      "1'; WAITFOR DELAY '0:0:2'--",
-      "1)||pg_sleep(2)--",
-    ];
-
-    for (const payload of timePayloads) {
-      const startTime = Date.now();
-      const result = await this.injector.inject(page, surface, payload, {
-        encoding: PayloadEncoding.NONE,
-        submit: true,
-        baseUrl,
-      });
-      const duration = Date.now() - startTime;
-
-      if (duration > baselineTime * 2 && duration > 2000) {
-        return this.createVulnerability(surface, result, SqlInjectionTechnique.TIME_BASED, baseUrl);
-      }
-    }
-
-    return null;
-  }
 
   /**
    * Analyze injection result for SQL injection indicators
@@ -507,7 +558,8 @@ export class SqlInjectionDetector implements IActiveDetector {
   async analyzeInjectionResult(result: InjectionResult): Promise<Vulnerability[]> {
     const vulnerabilities: Vulnerability[] = [];
     
-    if (this.hasSqlError(result)) {
+    const errorInfo = this.hasSqlError(result);
+    if (errorInfo.hasError) {
       const cwe = 'CWE-89';
       const owasp = getOWASP2025Category(cwe) || 'A03:2021';
       
@@ -520,8 +572,18 @@ export class SqlInjectionDetector implements IActiveDetector {
         cwe,
         owasp,
         evidence: {
-          request: { body: result.payload },
-          response: { body: result.response?.body?.substring(0, 500) || '' },
+          request: {
+            body: result.payload,
+            url: result.response?.url || result.surface.metadata?.url || '',
+            method: (result.surface.metadata?.['method'] as string) || (result.surface.type === AttackSurfaceType.FORM_INPUT ? 'POST' : 'GET'),
+          },
+          response: { body: result.response?.body?.substring(0, 500) || '', headers: result.response?.headers },
+          metadata: {
+            technique: SqlInjectionTechnique.ERROR_BASED,
+            confidence: this.getTechniqueConfidence(SqlInjectionTechnique.ERROR_BASED),
+            matchedPatterns: errorInfo.patterns,
+            verificationStatus: 'unverified',
+          }
         },
         remediation: 'Use parameterized queries or prepared statements to prevent SQL injection. Replace string concatenation with parameterized queries, use ORM frameworks with built-in protection, validate and sanitize all user input.',
         references: [
@@ -562,41 +624,18 @@ export class SqlInjectionDetector implements IActiveDetector {
   /**
    * Check if result contains SQL error indicators
    */
-  private hasSqlError(result: InjectionResult): boolean {
-    const body = result.response?.body?.toLowerCase() || '';
-    const errorPatterns = [
-      'sql syntax',
-      'mysql_fetch',
-      'mysqli',
-      'sqlexception',
-      'sequelizedatabaseerror',
-      'sequelize',
-      'sqlite_error',
-      'sqlite_constraint',
-      'sqlite error',
-      'ora-',
-      'postgresql',
-      'sqlite',
-      'mssql',
-      'syntax error',
-      'unclosed quotation',
-      'quoted string not properly terminated',
-      'database error',
-      'odbc',
-      'jdbc',
-      'pdo',
-      'you have an error in your sql',
-      'warning: mysql',
-      'uncaught exception',
-      'pg_query',
-      'pg_exec',
-      'at .*\\.js:\\d+:\\d+', // Stack traces
-      'typeorm',
-      'prisma',
-      'knex',
-    ];
+  private getMatchedErrorPatterns(result: InjectionResult): string[] {
+    const body = result.response?.body || '';
+    const matches = findErrorPatterns(body);
+    const sqlMatches = matches.filter((m) => SQL_ERROR_PATTERNS.some((p) => p.source === m.pattern.source));
+    return sqlMatches.map((m) => m.pattern.source);
+  }
 
-    return errorPatterns.some((pattern) => body.includes(pattern));
+  private hasSqlError(result: InjectionResult): { hasError: boolean; patterns: string[]; category?: string } {
+    const patterns = this.getMatchedErrorPatterns(result);
+    const body = result.response?.body || '';
+    const category = categorizeError(body) || undefined;
+    return { hasError: patterns.length > 0, patterns, category };
   }
 
   /**
@@ -605,16 +644,170 @@ export class SqlInjectionDetector implements IActiveDetector {
   private isNumericContext(surface: AttackSurface): boolean {
     const value = surface.value || surface.metadata['originalValue'] || '';
     const name = surface.name.toLowerCase();
-    
-    // Check if value is numeric
-    if (/^\d+$/.test(String(value))) return true;
-    
+    const inputType = String(surface.metadata?.['inputType'] || '').toLowerCase();
+
+    if (['number', 'range', 'tel'].includes(inputType)) return true;
+    if (name.includes('title')) return false;
+    const stringValue = String(value);
+    if (/^-?\d+(\.\d+)?$/.test(stringValue)) return true;
+
+    const urlPath = String(surface.metadata?.url || '');
+    if (/\/\d+(?:\/)?$/.test(urlPath)) return true;
+
     // Check common numeric parameter names
     if (['id', 'userid', 'orderid', 'productid', 'quantity', 'page', 'limit', 'offset'].some(n => name.includes(n))) {
       return true;
     }
     
     return false;
+  }
+
+  private async extractAuthenticationEvidence(page: Page, apiResponse: any): Promise<Record<string, any>> {
+    const cookies = await page.context().cookies();
+    const ls = await page.evaluate(() => {
+      try {
+        return {
+          token: localStorage.getItem('token'),
+          user: localStorage.getItem('user'),
+        };
+      } catch {
+        return {};
+      }
+    });
+    return {
+      cookies: cookies.filter((c) => /auth|session|token|jwt/i.test(c.name)),
+      localStorage: ls,
+      apiResponse,
+    };
+  }
+
+  private async detectAuthenticationSuccess(page: Page, apiResponse: any, beforeUrl: string, afterUrl: string): Promise<{ isAuthenticated: boolean; confidence: number; indicators: string[] }> {
+    const indicators: string[] = [];
+    const redirectsTo = ['/dashboard', '/home', '/profile', '/account'];
+    if (afterUrl !== beforeUrl && redirectsTo.some((p) => afterUrl.includes(p))) indicators.push('redirect');
+
+    const apiBody = JSON.stringify(apiResponse || {});
+    if (/"token"|"jwt"|"auth"/i.test(apiBody)) indicators.push('api-token');
+    if (/"authenticated"\s*:\s*true/i.test(apiBody)) indicators.push('api-authenticated');
+    if (/"user"|"profile"/i.test(apiBody)) indicators.push('api-user');
+
+    const cookies = await page.context().cookies();
+    if (cookies.some((c) => /session|auth|token|jwt/i.test(c.name))) indicators.push('cookie');
+
+    const ls = await page.evaluate(() => {
+      try {
+        return Boolean(localStorage.getItem('token') || localStorage.getItem('auth'));
+      } catch {
+        return false;
+      }
+    });
+    if (ls) indicators.push('localStorage');
+
+    const domIndicators = await page.locator('[data-testid="logout"], [data-testid="user-menu"], .user-menu, #account-dropdown, .logout, #profile').count();
+    if (domIndicators > 0) indicators.push('dom');
+
+    const confidence = Math.min(1, indicators.length * 0.2);
+    return { isAuthenticated: indicators.length > 0, confidence, indicators };
+  }
+
+  private determineInjectionContext(surface: AttackSurface): 'numeric' | 'string' | 'mixed' {
+    const numeric = this.isNumericContext(surface);
+    if (numeric) return 'numeric';
+    return 'string';
+  }
+
+  private getSurfaceKey(surface: AttackSurface): string {
+    return `${surface.type}:${surface.name}:${surface.metadata?.url || ''}`;
+  }
+
+  private shouldTestPayload(surface: AttackSurface, payload: string): boolean {
+    if (this.config.allowDuplicatePayloads) return true;
+    const key = this.getSurfaceKey(surface);
+    const set = this.testedPayloads.get(key) || new Set<string>();
+    if (set.has(payload)) return false;
+    set.add(payload);
+    this.testedPayloads.set(key, set);
+    return true;
+  }
+
+  private getContextualPayloads(surface: AttackSurface, technique: SqlInjectionTechnique): string[] {
+    const context = this.determineInjectionContext(surface);
+
+    const numericErrorPayloads = ["1'", '1 OR 1=1--', "1' OR '1'='1"];
+    const stringErrorPayloads = ["'", "' OR '1'='1", "' OR 1=1--"];
+
+    const numericTime = ["1' AND SLEEP(2)--", "1'; WAITFOR DELAY '0:0:2'--", "1'||pg_sleep(2)--"];
+    const stringTime = ["' AND SLEEP(2)--", "'; WAITFOR DELAY '0:0:2'--", "'||pg_sleep(2)--"];
+
+    switch (technique) {
+      case SqlInjectionTechnique.ERROR_BASED:
+        return Array.from(new Set(context === 'numeric' ? numericErrorPayloads : stringErrorPayloads));
+      case SqlInjectionTechnique.TIME_BASED:
+        return Array.from(new Set(context === 'numeric' ? numericTime : stringTime));
+      case SqlInjectionTechnique.BOOLEAN_BASED:
+        return []; // handled separately
+      default:
+        return [];
+    }
+  }
+
+  private getUniquePayloads(surface: AttackSurface, payloads: string[]): string[] {
+    return payloads.filter((p) => this.shouldTestPayload(surface, p));
+  }
+
+  private getBooleanPayloads(surface: AttackSurface): { truePayloads: string[]; falsePayloads: string[] } {
+    const context = this.determineInjectionContext(surface);
+
+    const truePayloads = context === 'numeric'
+      ? ['1 OR 1=1', "1' OR 1=1", '1) OR (1=1']
+      : ["' OR '1'='1", "' OR 'a'='a", "') OR ('1'='1"];
+
+    const falsePayloads = context === 'numeric'
+      ? ['1 AND 1=2', "1' AND 1=2", '1) AND (1=0']
+      : ["' AND '1'='2", "' AND 'a'='b", "') AND ('1'='2"];
+
+    return {
+      truePayloads: Array.from(new Set(truePayloads)),
+      falsePayloads: Array.from(new Set(falsePayloads)),
+    };
+  }
+
+  private getTechniqueOrder(surface: AttackSurface): Array<SqlInjectionTechnique | 'auth-bypass'> {
+    const name = surface.name.toLowerCase();
+    const isAuthField = ['email', 'user', 'login', 'username'].some((k) => name.includes(k));
+    if (surface.type === AttackSurfaceType.JSON_BODY) {
+      return [SqlInjectionTechnique.BOOLEAN_BASED, SqlInjectionTechnique.ERROR_BASED, SqlInjectionTechnique.TIME_BASED];
+    }
+    if (surface.type === AttackSurfaceType.API_PARAM) {
+      return [SqlInjectionTechnique.ERROR_BASED, SqlInjectionTechnique.BOOLEAN_BASED, SqlInjectionTechnique.TIME_BASED];
+    }
+    if (surface.type === AttackSurfaceType.FORM_INPUT && isAuthField && this.config.enableAuthBypass) {
+      return ['auth-bypass', SqlInjectionTechnique.ERROR_BASED, SqlInjectionTechnique.BOOLEAN_BASED, SqlInjectionTechnique.TIME_BASED];
+    }
+    return [SqlInjectionTechnique.ERROR_BASED, SqlInjectionTechnique.BOOLEAN_BASED, SqlInjectionTechnique.TIME_BASED];
+  }
+
+  private shouldSkipTechnique(technique: SqlInjectionTechnique | 'auth-bypass', findings: Vulnerability[]): boolean {
+    if (!this.config.skipRedundantTests) return false;
+    const highConfidence = findings.some((v) => ((v.evidence as any)?.metadata?.confidence || 0) >= this.config.minConfidenceForEarlyExit);
+    if (highConfidence && technique === SqlInjectionTechnique.TIME_BASED) return true;
+    return false;
+  }
+
+  private isTechniqueEnabled(technique: SqlInjectionTechnique | 'auth-bypass'): boolean {
+    if (technique === 'auth-bypass') return this.config.enableAuthBypass;
+    if (technique === SqlInjectionTechnique.ERROR_BASED) return this.config.enableErrorBased;
+    if (technique === SqlInjectionTechnique.BOOLEAN_BASED) return this.config.enableBooleanBased;
+    if (technique === SqlInjectionTechnique.TIME_BASED) return this.config.enableTimeBased;
+    return true;
+  }
+
+  private logTechniqueStart(technique: SqlInjectionTechnique | 'auth-bypass', surface: AttackSurface): void {
+    this.logger.debug(`[SQLi] Start ${technique} on ${surface.name}`);
+  }
+
+  private logTechniqueResult(technique: SqlInjectionTechnique | 'auth-bypass', success: boolean, duration: number): void {
+    this.logger.debug(`[SQLi] Result ${technique}: ${success ? 'VULN' : 'no'} in ${duration}ms`);
   }
 
   /**
@@ -633,41 +826,14 @@ export class SqlInjectionDetector implements IActiveDetector {
   /**
    * Compare JSON responses for boolean-based SQLi
    */
-  private compareJsonResponses(trueResults: InjectionResult[], falseResults: InjectionResult[]): { isSignificant: boolean; reason?: string } {
+  private compareJsonResponses(
+    trueResults: InjectionResult[],
+    falseResults: InjectionResult[]
+  ): { isSignificant: boolean; reason?: string; diff?: any; confidence: number } {
     try {
-      // Parse first valid JSON from each set
-      const trueJson = this.parseFirstValidJson(trueResults);
-      const falseJson = this.parseFirstValidJson(falseResults);
-      
-      if (!trueJson || !falseJson) return { isSignificant: false };
-
-      // Compare array lengths (e.g., data.length)
-      const trueArrayLength = this.countArrayElements(trueJson);
-      const falseArrayLength = this.countArrayElements(falseJson);
-      
-      if (trueArrayLength !== falseArrayLength && trueArrayLength > 0) {
-        return { isSignificant: true, reason: `Array length differs: ${trueArrayLength} vs ${falseArrayLength}` };
-      }
-
-      // Compare status fields
-      const trueStatus = this.extractStatus(trueJson);
-      const falseStatus = this.extractStatus(falseJson);
-      
-      if (trueStatus && falseStatus && trueStatus !== falseStatus) {
-        return { isSignificant: true, reason: `Status differs: ${trueStatus} vs ${falseStatus}` };
-      }
-
-      // Compare HTTP status codes
-      const trueHttpStatus = trueResults[0]?.response?.status;
-      const falseHttpStatus = falseResults[0]?.response?.status;
-      
-      if (trueHttpStatus && falseHttpStatus && trueHttpStatus !== falseHttpStatus) {
-        return { isSignificant: true, reason: `HTTP status differs: ${trueHttpStatus} vs ${falseHttpStatus}` };
-      }
-
-      return { isSignificant: false };
+      return this.isSignificantJsonDiff(trueResults, falseResults);
     } catch (error) {
-      return { isSignificant: false };
+      return { isSignificant: false, confidence: 0 };
     }
   }
 
@@ -690,18 +856,105 @@ export class SqlInjectionDetector implements IActiveDetector {
   /**
    * Count array elements in JSON response
    */
-  private countArrayElements(json: any): number {
-    if (Array.isArray(json)) return json.length;
-    if (json && typeof json === 'object') {
-      // Look for common array keys
-      const arrayKeys = ['data', 'results', 'items', 'products', 'users'];
-      for (const key of arrayKeys) {
-        if (Array.isArray(json[key])) {
-          return json[key].length;
+  private compareJsonStructure(a: any, b: any, path: string = ''): { structureDiff: boolean; keyDiffs: string[] } {
+    const keyDiffs: string[] = [];
+    if (a && typeof a === 'object') {
+      for (const key of Object.keys(a)) {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (!(b && typeof b === 'object' && key in b)) {
+          keyDiffs.push(nextPath);
+          continue;
+        }
+        if (typeof a[key] !== typeof b[key]) {
+          keyDiffs.push(nextPath);
+          continue;
+        }
+        if (typeof a[key] === 'object') {
+          const nested = this.compareJsonStructure(a[key], b[key], nextPath);
+          keyDiffs.push(...nested.keyDiffs);
         }
       }
     }
-    return 0;
+    return { structureDiff: keyDiffs.length > 0, keyDiffs };
+  }
+
+  private extractJsonMetrics(json: any): { totalKeys: number; arrayCount: number; objectDepth: number } {
+    const seen = new Set<any>();
+    const walk = (obj: any, depth: number): { total: number; arrays: number; maxDepth: number } => {
+      if (!obj || typeof obj !== 'object' || seen.has(obj)) return { total: 0, arrays: 0, maxDepth: depth };
+      seen.add(obj);
+      let total = 0;
+      let arrays = 0;
+      let maxDepth = depth;
+      for (const key of Object.keys(obj)) {
+        total += 1;
+        const val = obj[key];
+        if (Array.isArray(val)) arrays += 1;
+        if (val && typeof val === 'object') {
+          const child = walk(val, depth + 1);
+          total += child.total;
+          arrays += child.arrays;
+          maxDepth = Math.max(maxDepth, child.maxDepth);
+        }
+      }
+      return { total, arrays, maxDepth };
+    };
+    const res = walk(json, 1);
+    return { totalKeys: res.total, arrayCount: res.arrays, objectDepth: res.maxDepth };
+  }
+
+  private isSignificantJsonDiff(trueResults: InjectionResult[], falseResults: InjectionResult[]): { isSignificant: boolean; confidence: number; reason: string; diff?: any } {
+    const trueJson = this.parseFirstValidJson(trueResults);
+    const falseJson = this.parseFirstValidJson(falseResults);
+    if (!trueJson || !falseJson) return { isSignificant: false, confidence: 0, reason: 'No JSON to compare' };
+
+    const structure = this.compareJsonStructure(trueJson, falseJson);
+    const metricsTrue = this.extractJsonMetrics(trueJson);
+    const metricsFalse = this.extractJsonMetrics(falseJson);
+
+    const arrayDiff = metricsTrue.arrayCount !== metricsFalse.arrayCount;
+    const keyDiff = metricsTrue.totalKeys !== metricsFalse.totalKeys;
+    const depthDiff = metricsTrue.objectDepth !== metricsFalse.objectDepth;
+
+    const trueStatus = this.extractStatus(trueJson);
+    const falseStatus = this.extractStatus(falseJson);
+    const statusDiff = Boolean(trueStatus && falseStatus && trueStatus !== falseStatus);
+
+    const trueHttpStatus = trueResults[0]?.response?.status;
+    const falseHttpStatus = falseResults[0]?.response?.status;
+    const httpStatusDiff = Boolean(trueHttpStatus && falseHttpStatus && Math.floor(trueHttpStatus / 100) !== Math.floor(falseHttpStatus / 100));
+
+    const contentLenTrue = trueResults[0]?.response?.body?.length || 0;
+    const contentLenFalse = falseResults[0]?.response?.body?.length || 0;
+    const contentDiff = Math.abs(contentLenTrue - contentLenFalse) > Math.max(contentLenTrue, contentLenFalse) * 0.1;
+
+    const confidence =
+      (structure.structureDiff ? 0.3 : 0) +
+      (arrayDiff || keyDiff || depthDiff ? 0.3 : 0) +
+      (statusDiff ? 0.2 : 0) +
+      ((httpStatusDiff || contentDiff) ? 0.2 : 0);
+
+    const reasons: string[] = [];
+    if (structure.structureDiff) reasons.push(`Structure differs at keys: ${structure.keyDiffs.slice(0, 5).join(', ')}`);
+    if (arrayDiff) reasons.push(`Array count differs: ${metricsTrue.arrayCount} vs ${metricsFalse.arrayCount}`);
+    if (keyDiff) reasons.push(`Total keys differ: ${metricsTrue.totalKeys} vs ${metricsFalse.totalKeys}`);
+    if (depthDiff) reasons.push(`Depth differs: ${metricsTrue.objectDepth} vs ${metricsFalse.objectDepth}`);
+    if (statusDiff) reasons.push(`JSON status differs: ${trueStatus} vs ${falseStatus}`);
+    if (httpStatusDiff) reasons.push(`HTTP status class differs: ${trueHttpStatus} vs ${falseHttpStatus}`);
+    if (contentDiff) reasons.push(`Content length differs: ${contentLenTrue} vs ${contentLenFalse}`);
+
+    return {
+      isSignificant: confidence >= 0.5,
+      confidence,
+      reason: reasons.join('; '),
+      diff: {
+        structureDiff: structure.keyDiffs,
+        arrays: { true: metricsTrue.arrayCount, false: metricsFalse.arrayCount },
+        keys: { true: metricsTrue.totalKeys, false: metricsFalse.totalKeys },
+        depth: { true: metricsTrue.objectDepth, false: metricsFalse.objectDepth },
+        status: { json: { true: trueStatus, false: falseStatus }, http: { true: trueHttpStatus, false: falseHttpStatus } },
+      },
+    };
   }
 
   /**
@@ -714,6 +967,48 @@ export class SqlInjectionDetector implements IActiveDetector {
     return null;
   }
 
+  private getTechniqueConfidence(technique: SqlInjectionTechnique): number {
+    switch (technique) {
+      case SqlInjectionTechnique.ERROR_BASED:
+        return 0.9;
+      case SqlInjectionTechnique.BOOLEAN_BASED:
+        return 0.8;
+      case SqlInjectionTechnique.TIME_BASED:
+        return 0.7;
+      case SqlInjectionTechnique.STACKED_QUERIES:
+      case SqlInjectionTechnique.UNION_BASED:
+        return 0.75;
+      default:
+        return 0.5;
+    }
+  }
+
+  private calculateConfidence(technique: SqlInjectionTechnique, result: InjectionResult, additionalData?: any): number {
+    let confidence = this.getTechniqueConfidence(technique);
+    if (technique === SqlInjectionTechnique.ERROR_BASED && additionalData?.matchedPatterns?.length) {
+      confidence = Math.min(1, confidence + 0.05 * additionalData.matchedPatterns.length);
+    }
+    if (technique === SqlInjectionTechnique.BOOLEAN_BASED && additionalData?.jsonDiff?.confidence) {
+      confidence = Math.max(confidence, additionalData.jsonDiff.confidence);
+    }
+    if (technique === SqlInjectionTechnique.TIME_BASED && additionalData?.timing) {
+      confidence = Math.max(confidence, 0.7);
+    }
+    return confidence;
+  }
+
+  public getStats(): SqlDetectorStats {
+    return JSON.parse(JSON.stringify(this.stats));
+  }
+
+  public getDetectionStatistics(): { totalAttempts: number; successRate: number; avgTimeouts: number } {
+    const attempts = Object.values(this.stats.attempts).reduce((a, b) => a + b, 0);
+    const successRate = attempts ? this.stats.vulnsFound / attempts : 0;
+    const timeouts = Object.values(this.stats.timeoutsByTechnique).reduce((a, b) => a + b, 0);
+    const avgTimeouts = attempts ? timeouts / attempts : 0;
+    return { totalAttempts: attempts, successRate, avgTimeouts };
+  }
+
   /**
    * Create vulnerability object
    */
@@ -721,7 +1016,13 @@ export class SqlInjectionDetector implements IActiveDetector {
     surface: AttackSurface,
     result: InjectionResult,
     technique: SqlInjectionTechnique,
-    baseUrl: string
+    baseUrl: string,
+    details: {
+      matchedPatterns?: string[];
+      jsonDiff?: any;
+      timing?: number;
+      confidence?: number;
+    } = {}
   ): Vulnerability {
     const techniqueDescriptions = {
       [SqlInjectionTechnique.ERROR_BASED]: 'Error-based SQL injection detected through database error messages',
@@ -733,6 +1034,7 @@ export class SqlInjectionDetector implements IActiveDetector {
 
     const cwe = 'CWE-89';
     const owasp = getOWASP2025Category(cwe) || 'A03:2021';
+    const confidence = details.confidence ?? this.calculateConfidence(technique, result, details);
 
     return {
       id: `sqli-${technique}-${surface.name}-${Date.now()}`,
@@ -744,11 +1046,31 @@ export class SqlInjectionDetector implements IActiveDetector {
       owasp,
       url: result.response?.url || baseUrl,
       evidence: {
-        request: { body: result.payload },
+        request: {
+          body: result.payload,
+          url: result.response?.url || surface.metadata?.url || baseUrl,
+          method: (surface.metadata?.['method'] as string) || (surface.type === AttackSurfaceType.FORM_INPUT ? 'POST' : 'GET'),
+        },
         response: { 
           body: result.response?.body?.substring(0, 1000) || '',
           status: result.response?.status,
+          headers: result.response?.headers,
         },
+        metadata: {
+          technique,
+          confidence,
+          matchedPatterns: details.matchedPatterns,
+          jsonDiff: details.jsonDiff,
+          timing: details.timing ?? result.response?.timing,
+          responseComparison: details.jsonDiff,
+          timingAnalysis: details.timing,
+          contextInfo: {
+            surfaceType: surface.type,
+            injectionContext: this.determineInjectionContext(surface),
+            inputType: surface.metadata?.['inputType'],
+          },
+          verificationStatus: 'unverified',
+        }
       },
       remediation: 'Use parameterized queries or prepared statements. Replace string concatenation with parameterized queries, use ORM frameworks with built-in SQL injection protection, validate and sanitize all user input, apply principle of least privilege to database accounts.',
       references: [

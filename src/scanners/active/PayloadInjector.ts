@@ -290,26 +290,29 @@ export class PayloadInjector {
       submit?: boolean;
       delayMs?: number;
       baseUrl?: string;
+      maxConcurrent?: number;
     } = {}
   ): Promise<InjectionResult[]> {
     const results: InjectionResult[] = [];
-    const delayMs = options.delayMs || 100;
+    const delayMs = options.delayMs ?? 100;
+    const maxConcurrent = Math.max(1, options.maxConcurrent ?? 1);
 
-    for (let i = 0; i < payloads.length; i++) {
-      const payload = payloads[i];
-      if (!payload) continue; // Skip undefined payloads
-      
-      const encoding = options.encodings?.[i] || options.encoding || PayloadEncoding.NONE;
-
-      const result = await this.inject(page, surface, payload, {
-        ...options,
-        encoding,
+    for (let i = 0; i < payloads.length; i += maxConcurrent) {
+      const batch = payloads.slice(i, i + maxConcurrent);
+      const batchPromises = batch.map((payload, batchIndex) => {
+        const globalIndex = i + batchIndex;
+        if (!payload) return Promise.resolve(null);
+        const encoding = options.encodings?.[globalIndex] || options.encoding || PayloadEncoding.NONE;
+        return this.inject(page, surface, payload, {
+          ...options,
+          encoding,
+        });
       });
 
-      results.push(result);
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.filter(Boolean).forEach((res) => results.push(res as InjectionResult));
 
-      // Delay between injections to avoid rate limiting
-      if (i < payloads.length - 1 && delayMs > 0) {
+      if (i + maxConcurrent < payloads.length && delayMs > 0) {
         await this.delay(delayMs);
       }
     }

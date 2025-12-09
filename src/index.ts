@@ -21,6 +21,7 @@ export * from './testing/helpers';
 export { ActiveScanner } from './scanners/active/ActiveScanner';
 export { VerifiedScanner } from './scanners/active/VerifiedScanner';
 export { PageScanner } from './scanners/active/PageScanner';
+export { ElementScanner } from './scanners/active/ElementScanner';
 
 // Detectors
 export { SqlInjectionDetector } from './detectors/active/SqlInjectionDetector';

@@ -12,6 +12,7 @@ import { Vulnerability } from '../../types/vulnerability';
 import { ScanResult, VulnerabilitySummary } from '../../types/scan-result';
 import { LogLevel, ScanStatus, VulnerabilitySeverity } from '../../types/enums';
 import { DomExplorer, AttackSurfaceType } from './DomExplorer';
+import { ActionHelper } from './ActionHelper';
 import { 
   PageScanConfig, 
   PageTarget, 
@@ -37,12 +38,14 @@ export class PageScanner extends BaseScanner {
   private pageResults: PageScanResult[] = [];
   private allVulnerabilities: Vulnerability[] = [];
   private logger: Logger;
+  private actionHelper: ActionHelper;
 
   constructor(config: PageScanConfig) {
     super();
     this.pageScanConfig = config;
     this.domExplorer = new DomExplorer(LogLevel.INFO);
     this.logger = new Logger(LogLevel.INFO, 'PageScanner');
+    this.actionHelper = new ActionHelper(config.baseUrl, this.logger);
   }
 
   /**
@@ -88,13 +91,15 @@ export class PageScanner extends BaseScanner {
     this.logger.info(`Starting page scan on ${this.pageScanConfig.pages.length} pages`);
 
     // Perform authentication if configured
-    if (this.pageScanConfig.authentication) {
+    if (this.pageScanConfig.bwappAuth) {
+      await this.performBwappAuthentication(page);
+    } else if (this.pageScanConfig.authentication) {
       await this.performAuthentication(page);
     }
 
     // Execute global pre-actions
     if (this.pageScanConfig.globalPreActions) {
-      await this.executeActions(page, this.pageScanConfig.globalPreActions);
+      await this.actionHelper.executeActions(page, this.pageScanConfig.globalPreActions, this.delay);
     }
 
     // Scan each page
@@ -160,7 +165,7 @@ export class PageScanner extends BaseScanner {
    */
   private async scanPage(page: Page, pageTarget: PageTarget): Promise<PageScanResult> {
     const pageStartTime = Date.now();
-    const fullUrl = this.resolveUrl(pageTarget.url);
+    const fullUrl = this.actionHelper.resolveUrl(pageTarget.url);
     
     this.logger.info(`\n${'='.repeat(60)}`);
     this.logger.info(`Scanning: ${pageTarget.name || pageTarget.url}`);
@@ -189,7 +194,7 @@ export class PageScanner extends BaseScanner {
 
     // Execute pre-actions for this page
     if (pageTarget.preActions) {
-      await this.executeActions(page, pageTarget.preActions);
+      await this.actionHelper.executeActions(page, pageTarget.preActions, this.delay);
     }
 
     // Wait for specific condition if configured
@@ -265,110 +270,10 @@ export class PageScanner extends BaseScanner {
     };
   }
 
-  /**
-   * Resolve URL (handle relative paths)
-   */
-  private resolveUrl(url: string): string {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    
-    const baseUrl = this.pageScanConfig.baseUrl.replace(/\/$/, '');
-    const path = url.startsWith('/') ? url : `/${url}`;
-    return `${baseUrl}${path}`;
-  }
+  // Shared action/URL helpers now live in ActionHelper
 
   /**
-   * Execute page actions
-   */
-  private async executeActions(page: Page, actions: PageAction[]): Promise<void> {
-    for (const action of actions) {
-      try {
-        this.logger.debug(`Executing action: ${action.type} - ${action.description || ''}`);
-        
-        switch (action.type) {
-          case 'click':
-            if (action.selector) {
-              await page.click(action.selector, { timeout: action.timeout || 5000 });
-            }
-            break;
-            
-          case 'fill':
-            if (action.selector && action.value) {
-              await page.fill(action.selector, action.value, { timeout: action.timeout || 5000 });
-            }
-            break;
-            
-          case 'select':
-            if (action.selector && action.value) {
-              await page.selectOption(action.selector, action.value, { timeout: action.timeout || 5000 });
-            }
-            break;
-            
-          case 'hover':
-            if (action.selector) {
-              await page.hover(action.selector, { timeout: action.timeout || 5000 });
-            }
-            break;
-            
-          case 'wait':
-            await this.delay(action.timeout || 1000);
-            break;
-            
-          case 'scroll':
-            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-            break;
-            
-          case 'navigate':
-            if (action.value) {
-              await page.goto(action.value, { waitUntil: 'domcontentloaded' });
-            }
-            break;
-            
-          case 'dismiss-dialog':
-            // Try to close common dialogs
-            await this.dismissDialogs(page);
-            break;
-        }
-      } catch (error) {
-        this.logger.warn(`Action failed: ${action.type} - ${error}`);
-      }
-    }
-  }
-
-  /**
-   * Dismiss common dialogs (cookie banners, welcome dialogs, etc.)
-   */
-  private async dismissDialogs(page: Page): Promise<void> {
-    const dismissSelectors = [
-      // Juice Shop specific
-      'button[aria-label="Close Welcome Banner"]',
-      '.close-dialog',
-      'button.mat-focus-indicator.mat-button',
-      
-      // Common cookie/dialog selectors
-      '[aria-label="dismiss cookie message"]',
-      '.cookie-consent-dismiss',
-      '#cookie-accept',
-      '.modal-close',
-      '[data-dismiss="modal"]',
-    ];
-
-    for (const selector of dismissSelectors) {
-      try {
-        const element = await page.$(selector);
-        if (element && await element.isVisible()) {
-          await element.click();
-          await this.delay(300);
-        }
-      } catch {
-        // Ignore - dialog might not exist
-      }
-    }
-  }
-
-  /**
-   * Wait for a condition
+   * Wait for a condition before scanning
    */
   private async waitForCondition(page: Page, condition: PageTarget['waitFor']): Promise<void> {
     if (!condition) return;
@@ -379,19 +284,15 @@ export class PageScanner extends BaseScanner {
       case 'selector':
         await page.waitForSelector(String(condition.value), { timeout });
         break;
-        
       case 'navigation':
         await page.waitForURL(String(condition.value), { timeout });
         break;
-        
       case 'networkidle':
         await page.waitForLoadState('networkidle', { timeout });
         break;
-        
       case 'timeout':
         await this.delay(Number(condition.value) || 1000);
         break;
-        
       case 'function':
         if (typeof condition.value === 'string') {
           await page.waitForFunction(condition.value, { timeout });
@@ -438,11 +339,11 @@ export class PageScanner extends BaseScanner {
 
     this.logger.info('Performing authentication...');
     
-    const loginUrl = this.resolveUrl(auth.loginUrl);
+    const loginUrl = this.actionHelper.resolveUrl(auth.loginUrl);
     await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     
-    await this.executeActions(page, auth.loginActions);
+    await this.actionHelper.executeActions(page, auth.loginActions, this.delay);
 
     // Verify login success
     if (auth.successIndicator) {
@@ -456,6 +357,42 @@ export class PageScanner extends BaseScanner {
       } catch {
         this.logger.warn('Could not verify authentication success');
       }
+    }
+  }
+
+  /**
+   * Built-in authentication flow for bWAPP instances.
+   * Uses defaults (bee/bug, low security) unless overridden via bwappAuth config.
+   */
+  private async performBwappAuthentication(page: Page): Promise<void> {
+    const auth = this.pageScanConfig.bwappAuth;
+    if (!auth) return;
+
+    const username = auth.username ?? 'bee';
+    const password = auth.password ?? 'bug';
+    const securityLevel = auth.securityLevel ?? '0';
+    const loginPath = auth.loginUrl ?? '/login.php';
+    const portalPath = auth.portalPath ?? '/portal.php';
+
+    const loginUrl = this.actionHelper.resolveUrl(loginPath);
+    const actions: PageAction[] = [
+      { type: 'navigate', value: loginUrl, description: 'Open bWAPP login page' },
+      { type: 'fill', selector: 'input[name="login"]', value: username, description: 'Fill username' },
+      { type: 'fill', selector: 'input[name="password"]', value: password, description: 'Fill password' },
+      { type: 'select', selector: 'select[name="security_level"]', value: securityLevel, description: 'Select security level' },
+      { type: 'click', selector: '[name="form"]', description: 'Submit login form' },
+    ];
+
+    this.logger.info(`Performing bWAPP authentication as ${username} (security level ${securityLevel})`);
+
+    await this.actionHelper.executeActions(page, actions, this.delay);
+
+    // Verify login success
+    try {
+      await page.waitForURL(`**${portalPath}`, { timeout: 10000 });
+      this.logger.info('bWAPP authentication successful');
+    } catch (error) {
+      this.logger.warn(`bWAPP authentication verification failed: ${error}`);
     }
   }
 

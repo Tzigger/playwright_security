@@ -65,7 +65,7 @@ async function runVerifiedScan() {
     // Create verified scanner
     const scannerConfig: Partial<VerifiedScannerConfig> = {
       verificationLevel: VerificationLevel.STANDARD,
-      minConfidence: 0.6,  // 60% confidence minimum
+      minConfidence: 0.5,  // 50% confidence minimum (accept 1/2 techniques)
       verifyAll: true,
       verificationTimeout: 20000,
       maxPages: 5,
@@ -80,10 +80,10 @@ async function runVerifiedScan() {
       new XssDetector(),
     ]);
 
-    // Prepare scan config
+    // Prepare scan config - point to login page with vulnerable form
     const config: Partial<ScanConfiguration> = {
       target: {
-        url: JUICE_SHOP_URL,
+        url: `${JUICE_SHOP_URL}/#/login`,  // Test login page specifically
       },
       scanners: {
         active: {

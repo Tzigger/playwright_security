@@ -5,7 +5,7 @@
  * to achieve 90%+ accuracy like commercial DAST tools.
  */
 
-import type { Page, Request } from 'playwright';
+import type { Request } from 'playwright';
 import { BaseScanner } from '../../core/interfaces/IScanner';
 import { IActiveDetector } from '../../core/interfaces/IActiveDetector';
 import { Vulnerability } from '../../types/vulnerability';
@@ -18,7 +18,6 @@ import { TimeBasedVerifier } from '../../core/verification/techniques/TimeBasedV
 import { ResponseDiffVerifier } from '../../core/verification/techniques/ResponseDiffVerifier';
 import { ReplayVerifier } from '../../core/verification/BaseVerifier';
 import { VerificationLevel, VerificationStatus } from '../../types/verification';
-import { Request } from 'playwright';
 
 /**
  * Configuration for verified scanning
@@ -181,6 +180,12 @@ export class VerifiedScanner extends BaseScanner {
     await this.domExplorer.detectSPAFramework(page);
     const attackSurfaces = await this.domExplorer.explore(page, capturedRequests);
     
+    // Debug: log all attack surfaces
+    this.logger.info(`Total attack surfaces found: ${attackSurfaces.length}`);
+    attackSurfaces.forEach(s => {
+      this.logger.info(`  - ${s.type}: ${s.name} (context: ${s.context})`);
+    });
+    
     const testableSurfaces = attackSurfaces.filter(s => 
       [AttackSurfaceType.FORM_INPUT, AttackSurfaceType.URL_PARAMETER,
        AttackSurfaceType.API_PARAM, AttackSurfaceType.JSON_BODY].includes(s.type)
@@ -270,13 +275,16 @@ export class VerifiedScanner extends BaseScanner {
             this.logger.info(`  ❌ FALSE POSITIVE - ${result.reason}`);
             this.stats.falsePositives++;
           } else {
-            this.logger.info(`  ⚠️ INCONCLUSIVE - ${result.reason}`);
+            this.logger.info(`  ⚠️ INCONCLUSIVE - ${result.reason} (confidence: ${(result.confidence * 100).toFixed(0)}%)`);
             this.stats.inconclusive++;
             
             // Report inconclusive with lower severity if confidence is above threshold
             if (result.confidence >= 0.5) {
+              this.logger.info(`     Adding as low-severity (confidence ${result.confidence.toFixed(2)} >= 0.5)`);
               verifiedVuln.severity = this.reduceSeverity(verifiedVuln.severity);
               verifiedVulnerabilities.push(verifiedVuln);
+            } else {
+              this.logger.info(`     Skipping (confidence ${result.confidence.toFixed(2)} < 0.5)`);
             }
           }
         } catch (error) {

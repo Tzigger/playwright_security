@@ -111,15 +111,15 @@ export class InjectionDetector implements IActiveDetector {
    * Test for Server-Side Template Injection (SSTI)
    */
   private async testSSTI(page: any, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const payloads = [
-      '{{7*7}}',
-      '${7*7}',
-      '<%= 7*7 %>', 
-      '{{7*7}}', // Jinja2, Twig
-      '#{7*7}', // Freemarker
+    // Use a large, unique marker to avoid natural 49-style coincidences in page content
+    const sstiPayloads = [
+      { payload: '{{13337*9999}}', expected: '133356663' }, // Jinja2/Twig
+      { payload: '${13337*9999}', expected: '133356663' },  // Velocity/EL
+      { payload: '<%= 13337*9999 %>', expected: '133356663' }, // ERB/JSP
+      { payload: '#{13337*9999}', expected: '133356663' }, // Freemarker
     ];
 
-    for (const payload of payloads) {
+    for (const { payload, expected } of sstiPayloads) {
       try {
         const result = await this.injector.inject(page, surface, payload, {
           encoding: PayloadEncoding.NONE,
@@ -128,16 +128,18 @@ export class InjectionDetector implements IActiveDetector {
         });
 
         const body = result.response?.body || '';
-        
-        // Check if 49 is reflected where 7*7 was injected
-        if (body.includes('49') && !body.includes(payload)) {
+        const evaluated = body.includes(expected);
+        const reflected = body.includes(payload);
+
+        // Check if the expression evaluated server-side (expected value present, payload not echoed)
+        if (evaluated && !reflected) {
            const cwe = 'CWE-94';
            const owasp = getOWASP2025Category(cwe) || 'A03:2021';
 
            return {
             id: `ssti-${Date.now()}`,
             title: 'Server-Side Template Injection (SSTI)',
-            description: `Template injection detected in ${surface.type} '${surface.name}'. Payload '${payload}' evaluated to '49'.`,
+            description: `Template injection detected in ${surface.type} '${surface.name}'. Payload '${payload}' evaluated to '${expected}'.`,
             severity: VulnerabilitySeverity.HIGH,
             category: VulnerabilityCategory.INJECTION,
             cwe,
@@ -174,7 +176,7 @@ export class InjectionDetector implements IActiveDetector {
   getPayloads(): string[] {
     return [
       '; cat /etc/passwd',
-      '{{7*7}}',
+      '{{13337*9999}}',
       '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>' 
     ];
   }
