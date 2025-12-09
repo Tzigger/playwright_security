@@ -14,6 +14,8 @@ playwright/.cache/
 playwright/.auth/
 coverage/
 .nyc_output/
+.playwright-mcp/
+
 
 # Generated reports
 reports/

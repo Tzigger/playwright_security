@@ -5,7 +5,6 @@
     "lib": ["ES2022", "DOM"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
     
     /* Type Checking */
     "strict": true,

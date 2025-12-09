@@ -18,8 +18,9 @@ import { AggressivenessLevel, AuthType, BrowserType, LogLevel, ReportFormat, Ver
 const program = new Command();
 
 program
-  .name('dast-scan')
-  .description('Run a DAST scan with Playwright Security')
+  .name('kinetic')
+  .version('0.2.0')
+  .description('Kinetic - High-performance DAST security scanner powered by Playwright')
   .argument('[url]', 'Target URL to scan (optional if using --config)')
   .option('-c, --config <file>', 'Load configuration from file')
   .option('-o, --output <dir>', 'Output directory for reports', 'reports')

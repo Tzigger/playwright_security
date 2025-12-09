@@ -14,7 +14,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: ['**/*.spec.ts'], // Only Playwright spec files
-  testIgnore: ['**/e2e/**', '**/integration/**', '**/unit/**'], // Ignore Jest test directories
+  testIgnore: ['**/e2e/**', '**/unit/**'], // Ignore Jest test directories
   globalSetup: './global-setup',
   /* Run tests in files in parallel */
   fullyParallel: true,

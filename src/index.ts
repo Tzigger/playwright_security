@@ -1,5 +1,8 @@
 /**
- * Main entry point (placeholder)
+ * Kinetic Security Scanner
+ * High-performance Dynamic Application Security Testing (DAST) Engine powered by Playwright
+ * 
+ * @packageDocumentation
  */
 
 export * from './types';
@@ -23,6 +26,10 @@ export { VerifiedScanner } from './scanners/active/VerifiedScanner';
 export { PageScanner } from './scanners/active/PageScanner';
 export { ElementScanner } from './scanners/active/ElementScanner';
 
+// NEW: API Scanner and Endpoint Discovery
+export { ApiScanner, ApiTestCategory, type ApiTestResult, type ApiScannerConfig } from './scanners/active/ApiScanner';
+export { ApiEndpointDiscovery, ApiType, type ApiEndpoint, type ApiParameter, type GraphQLOperation } from './scanners/active/ApiEndpointDiscovery';
+
 // Detectors
 export { SqlInjectionDetector } from './detectors/active/SqlInjectionDetector';
 export { XssDetector } from './detectors/active/XssDetector';
@@ -32,3 +39,10 @@ export { PathTraversalDetector } from './detectors/active/PathTraversalDetector'
 // Verification
 export { VerificationEngine } from './core/verification/VerificationEngine';
 export * from './types/verification';
+
+// NEW: Response Analysis
+export { ResponseAnalyzer, type ResponseVulnerability, type ResponseAnalyzerConfig } from './core/analysis/ResponseAnalyzer';
+
+// NEW: SPA Content Waiting
+export { SPAContentWaiter, SPAFramework, waitForSPAContent, type FrameworkDetection, type SPAWaitConfig } from './utils/spa/SPAContentWaiter';
+

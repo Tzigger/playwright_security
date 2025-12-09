@@ -4,6 +4,7 @@
  */
 
 import { Vulnerability } from './vulnerability';
+import type { JsonDiffResult, EncodingInfo, ErrorMatchResult } from '../utils/helpers/response-comparison';
 
 /**
  * Verification level determines how thorough the confirmation process is
@@ -53,7 +54,13 @@ export interface VerificationAttempt {
   details?: string;
   /** Error if verification failed */
   error?: string;
-  /** Timestamp of attempt */
+  /** Categorized error type for failures */
+  errorCategory?: string;
+  /** Number of retries performed */
+  retryCount?: number;
+  /** Which payload variation was used (if any) */
+  payloadVariation?: string;
+  /** Timestamp of attempt creation */
   timestamp: Date;
 }
 
@@ -86,12 +93,20 @@ export interface VerificationConfig {
   /** Minimum confidence to report (0-1) */
   minConfidence: number;
   /** Maximum verification attempts per technique */
-  maxAttempts: number;
+  maxAttempts: number; // Includes retries and payload variations per technique
   /** Timeout per verification attempt (ms) */
   attemptTimeout: number;
   /** Whether to stop on first confirmation */
   stopOnConfirm: boolean;
-  /** Techniques to use (if empty, use defaults for vulnerability type) */
+  /** Enable multi-attempt verification with payload variations */
+  enableMultiAttempt?: boolean;
+  /** Maximum payload variations per technique */
+  maxPayloadVariations?: number;
+  /** Hint to select a specific payload variation for this attempt */
+  payloadVariation?: string;
+  /** Optional manual override for technique ordering */
+  techniqueOrder?: string[];
+  /** Techniques to use (if empty, use defaults for vulnerability type). Uses stable verifier identifiers. */
   techniques?: string[];
 }
 
@@ -105,7 +120,7 @@ export const DEFAULT_VERIFICATION_CONFIGS: Record<string, VerificationConfig> = 
     maxAttempts: 3,
     attemptTimeout: 15000,
     stopOnConfirm: false,
-    techniques: ['time-based', 'response-diff', 'error-pattern'],
+    techniques: ['time-based', 'response-diff'],
   },
   'xss': {
     level: VerificationLevel.STANDARD,
@@ -113,7 +128,7 @@ export const DEFAULT_VERIFICATION_CONFIGS: Record<string, VerificationConfig> = 
     maxAttempts: 2,
     attemptTimeout: 10000,
     stopOnConfirm: true,
-    techniques: ['dom-execution', 'response-reflection', 'encoding-bypass'],
+    techniques: ['response-diff'],
   },
   'command-injection': {
     level: VerificationLevel.FULL,
@@ -121,7 +136,7 @@ export const DEFAULT_VERIFICATION_CONFIGS: Record<string, VerificationConfig> = 
     maxAttempts: 3,
     attemptTimeout: 20000,
     stopOnConfirm: false,
-    techniques: ['time-based', 'output-based', 'error-based'],
+    techniques: ['time-based', 'response-diff'],
   },
   'path-traversal': {
     level: VerificationLevel.STANDARD,
@@ -129,7 +144,7 @@ export const DEFAULT_VERIFICATION_CONFIGS: Record<string, VerificationConfig> = 
     maxAttempts: 2,
     attemptTimeout: 10000,
     stopOnConfirm: true,
-    techniques: ['file-content', 'response-diff'],
+    techniques: ['response-diff'],
   },
   'ssrf': {
     level: VerificationLevel.FULL,
@@ -137,7 +152,7 @@ export const DEFAULT_VERIFICATION_CONFIGS: Record<string, VerificationConfig> = 
     maxAttempts: 3,
     attemptTimeout: 30000,
     stopOnConfirm: false,
-    techniques: ['dns-callback', 'time-based', 'response-diff'],
+    techniques: ['time-based', 'response-diff'],
   },
   default: {
     level: VerificationLevel.BASIC,
@@ -166,12 +181,22 @@ export interface VerificationStatistics {
   averageTime: number;
   /** Verification accuracy (confirmed / total) */
   accuracy: number;
+  /** Network error occurrences */
+  networkErrors: number;
+  /** Timeout occurrences */
+  timeouts: number;
+  /** Retry attempts performed */
+  retries: number;
+  /** Average attempts per vulnerability */
+  averageAttemptsPerVuln: number;
 }
 
 /**
  * Interface for vulnerability verifiers
  */
 export interface IVulnerabilityVerifier {
+  /** Stable identifier for config selection */
+  id: string;
   /** Verifier name */
   name: string;
   /** Vulnerability types this verifier supports */
@@ -198,6 +223,16 @@ export interface TimingAnalysis {
   sampleCount: number;
   /** Standard deviation of baseline */
   baselineStdDev: number;
+  /** Welch t-statistic comparing baseline vs payload */
+  tStatistic?: number;
+  /** Two-tailed p-value for timing difference */
+  pValue?: number;
+  /** Confidence interval for observed timings */
+  confidenceInterval?: { lower: number; upper: number; mean: number };
+  /** Outlier samples removed from analysis */
+  outliersRemoved?: number[];
+  /** Coefficient of variation for baseline */
+  coefficientOfVariation?: number;
 }
 
 /**
@@ -212,4 +247,23 @@ export interface ResponseDiff {
   similarity: number;
   /** Key differences found */
   differences: string[];
+  /** Structural similarity score for JSON */
+  structuralSimilarity?: number;
+  /** Content similarity score using Levenshtein */
+  contentSimilarity?: number;
+  /** Detailed JSON changes */
+  jsonChanges?: JsonDiffResult;
+  /** Detected encoding of reflected content */
+  encodingDetected?: EncodingInfo;
+}
+
+/** JSON diff details used by response comparison utilities. */
+export type { JsonDiffResult, EncodingInfo, ErrorMatchResult };
+
+/** Metadata describing verifier techniques for prioritization. */
+export interface TechniqueMetadata {
+  name: string;
+  cost: number;
+  reliability: number;
+  speed: number;
 }

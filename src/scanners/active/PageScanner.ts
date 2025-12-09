@@ -39,12 +39,14 @@ export class PageScanner extends BaseScanner {
   private allVulnerabilities: Vulnerability[] = [];
   private logger: Logger;
   private actionHelper: ActionHelper;
+  private logLevel: LogLevel;
 
-  constructor(config: PageScanConfig) {
+  constructor(config: PageScanConfig, logLevel: LogLevel = LogLevel.INFO) {
     super();
     this.pageScanConfig = config;
-    this.domExplorer = new DomExplorer(LogLevel.INFO);
-    this.logger = new Logger(LogLevel.INFO, 'PageScanner');
+    this.logLevel = logLevel;
+    this.domExplorer = new DomExplorer(this.logLevel);
+    this.logger = new Logger(this.logLevel, 'PageScanner');
     this.actionHelper = new ActionHelper(config.baseUrl, this.logger);
   }
 
@@ -67,6 +69,15 @@ export class PageScanner extends BaseScanner {
    * Initialize hook
    */
   protected override async onInitialize(): Promise<void> {
+    // Check if context provides advanced.logLevel and update loggers if different from constructor default
+    const contextLogLevel = this.context?.config?.advanced?.logLevel;
+    if (contextLogLevel !== undefined && contextLogLevel !== this.logLevel) {
+      this.logLevel = contextLogLevel;
+      this.logger = new Logger(this.logLevel, 'PageScanner');
+      this.domExplorer = new DomExplorer(this.logLevel);
+      this.actionHelper = new ActionHelper(this.pageScanConfig.baseUrl, this.logger);
+    }
+
     this.logger.info('Initializing PageScanner');
     this.pageResults = [];
     this.allVulnerabilities = [];
@@ -211,7 +222,11 @@ export class PageScanner extends BaseScanner {
        AttackSurfaceType.API_PARAM, AttackSurfaceType.JSON_BODY].includes(s.type)
     );
 
-    this.logger.info(`Found ${testableSurfaces.length} attack surfaces on ${pageTarget.name || pageTarget.url}`);
+    this.logger.info(`Found ${testableSurfaces.length} testable attack surfaces on ${pageTarget.name || pageTarget.url}`);
+    // Log detailed attack surface info
+    testableSurfaces.forEach((s, idx) => {
+      this.logger.info(`  [${idx + 1}] ${s.type}: ${s.name} (context:${s.context})${s.value ? `, value="${s.value.substring(0, 30)}"` : ''}`);
+    });
 
     // Fill forms if configured
     if (pageTarget.fillForms !== false && pageTarget.formValues) {
@@ -220,9 +235,10 @@ export class PageScanner extends BaseScanner {
 
     // Run detectors
     const pageVulnerabilities: Vulnerability[] = [];
+    this.logger.info(`Running ${this.detectors.size} registered detectors: ${[...this.detectors.keys()].join(', ')}`);
     
     for (const [name, detector] of this.detectors) {
-      this.logger.info(`Running detector: ${name}`);
+      this.logger.info(`\n--- Running detector: ${name} on ${testableSurfaces.length} surfaces ---`);
       
       try {
         // Create detector context with all testable surfaces

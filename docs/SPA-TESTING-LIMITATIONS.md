@@ -2,7 +2,7 @@
 
 ## Overview
 
-While the Playwright Security framework includes SPA (Single Page Application) support, there are known limitations when testing complex JavaScript frameworks like Angular-based applications (e.g., OWASP Juice Shop).
+While the Kinetic framework includes SPA (Single Page Application) support, there are known limitations when testing complex JavaScript frameworks like Angular-based applications (e.g., OWASP Juice Shop).
 
 ## Current Status
 

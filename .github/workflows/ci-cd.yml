@@ -177,7 +177,7 @@ jobs:
               body: `## 📦 Published to NPM
               
               \`\`\`bash
-              npm install playwright_security@${packageJson.version}
+              npm install @tzigger/kinetic@${packageJson.version}
               \`\`\`
               
               ${context.payload.release.body || ''}
@@ -225,7 +225,7 @@ jobs:
             
             const draftRelease = releases.data.find(r => r.draft && r.tag_name === `v${version}`);
             
-            const releaseBody = `## Changes\n\n${{ steps.changelog.outputs.commits }}\n\n## Installation\n\n\`\`\`bash\nnpm install playwright_security@${version}\n\`\`\``;
+            const releaseBody = `## Changes\n\n${{ steps.changelog.outputs.commits }}\n\n## Installation\n\n\`\`\`bash\nnpm install @tzigger/kinetic@${version}\n\`\`\``;
             
             if (draftRelease) {
               await github.rest.repos.updateRelease({

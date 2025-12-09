@@ -9,8 +9,8 @@ describe('CLI E2E Tests', () => {
   it('should display help information', (done) => {
     exec(`node ${cliPath} --help`, (error, stdout, stderr) => {
       expect(error).toBeNull();
-      expect(stdout).toContain('Usage: dast-scan [options] [url]');
-      expect(stdout).toContain('Run a DAST scan with Playwright Security');
+      expect(stdout).toContain('Usage: kinetic [options] [url]');
+      expect(stdout).toContain('Kinetic - High-performance DAST security scanner');
       done();
     });
   });

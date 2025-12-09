@@ -27,6 +27,7 @@ export enum InjectionContext {
   SQL = 'sql',
   JSON = 'json',
   XML = 'xml',
+  COMMAND = 'command',
 }
 
 /**
@@ -155,30 +156,44 @@ export class DomExplorer {
       // 1. Descoperă input-uri din formulare
       const formSurfaces = await this.discoverFormInputs(page);
       surfaces.push(...formSurfaces);
+      this.logger.debug(`[DomExplorer] Form inputs discovered: ${formSurfaces.length}`);
+      formSurfaces.forEach(s => this.logger.debug(`  - ${s.type}: ${s.name} (context: ${s.context})${s.metadata?.inputType ? `, inputType: ${s.metadata.inputType}` : ''}`));
 
       // 2. Descoperă parametri URL
       const urlSurfaces = await this.discoverUrlParameters(page);
       surfaces.push(...urlSurfaces);
+      this.logger.debug(`[DomExplorer] URL parameters discovered: ${urlSurfaces.length}`);
+      urlSurfaces.forEach(s => this.logger.debug(`  - ${s.type}: ${s.name}=${s.value}`));
 
       // 3. Descoperă link-uri pentru crawling
       const linkSurfaces = await this.discoverLinks(page);
       surfaces.push(...linkSurfaces);
+      this.logger.debug(`[DomExplorer] Links discovered: ${linkSurfaces.length}`);
 
       // 4. Descoperă cookies
       const cookieSurfaces = await this.discoverCookies(page);
       surfaces.push(...cookieSurfaces);
+      this.logger.debug(`[DomExplorer] Cookies discovered: ${cookieSurfaces.length}`);
+      cookieSurfaces.forEach(s => this.logger.debug(`  - cookie: ${s.name}=${s.value?.substring(0, 30)}...`));
 
       // 5. Analizează traficul API (Smart Exploration)
       if (collectedRequests.length > 0) {
         const apiSurfaces = await this.discoverApiEndpoints(collectedRequests);
         surfaces.push(...apiSurfaces);
+        this.logger.debug(`[DomExplorer] API endpoints discovered: ${apiSurfaces.length}`);
+        apiSurfaces.forEach(s => this.logger.debug(`  - ${s.type}: ${s.name} at ${s.metadata?.url}`));
       }
 
       // 6. Descoperă elemente clickabile (pentru SPA crawling)
       const clickables = await this.discoverClickables(page);
       surfaces.push(...clickables);
+      this.logger.debug(`[DomExplorer] Clickable elements discovered: ${clickables.length}`);
 
+      // INFO-level summary by type
+      const byType: Record<string, number> = {};
+      surfaces.forEach(s => { byType[s.type] = (byType[s.type] || 0) + 1; });
       this.logger.info(`DOM exploration completed. Found ${surfaces.length} attack surfaces`);
+      this.logger.info(`[DomExplorer] Breakdown: ${Object.entries(byType).map(([t, c]) => `${t}:${c}`).join(', ')}`);
     } catch (error) {
       this.logger.error(`Error during DOM exploration: ${error}`);
     }

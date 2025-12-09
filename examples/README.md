@@ -1,6 +1,6 @@
-# Examples & Integration Patterns
+# Kinetic Examples & Integration Patterns
 
-This directory contains examples showing how to use the Playwright Security Framework in different scenarios.
+This directory contains examples showing how to use Kinetic Security Scanner in different scenarios.
 
 ## 📁 Files
 
@@ -44,10 +44,10 @@ Includes examples for:
 
 ```bash
 # Use the example config
-dast-scan --config examples/dast.config.json
+kinetic --config examples/dast.config.json
 
 # Override specific settings
-dast-scan --config examples/dast.config.json https://example.com --parallel 4
+kinetic --config examples/dast.config.json https://example.com --parallel 4
 ```
 
 ### 3. CI/CD Integration (GitHub Actions)
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - run: npx playwright install chromium
-      - run: npx dast-scan $STAGING_URL --formats sarif
+      - run: npx kinetic $STAGING_URL --formats sarif
       - uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: reports/*.sarif
@@ -76,7 +76,7 @@ jobs:
 
 ```bash
 # Run before deploying to production
-dast-scan https://staging.myapp.com \
+kinetic https://staging.myapp.com \
   --config dast.config.json \
   --formats sarif,html \
   --output ./pre-deploy-scan
@@ -92,7 +92,7 @@ fi
 
 ```bash
 # Quick scan during development
-dast-scan http://localhost:3000 \
+kinetic http://localhost:3000 \
   --formats console \
   --parallel 1 \
   --max-pages 5
@@ -110,7 +110,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - run: dast-scan $PRODUCTION_URL --formats html,sarif
+      - run: kinetic $PRODUCTION_URL --formats html,sarif
       - name: Email results
         run: send-email --attachment reports/*.html
 ```
@@ -121,13 +121,13 @@ jobs:
 
 ```bash
 # Development
-dast-scan --config dast.dev.config.json
+kinetic --config dast.dev.config.json
 
 # Staging
-dast-scan --config dast.staging.config.json
+kinetic --config dast.staging.config.json
 
 # Production (less aggressive)
-dast-scan --config dast.prod.config.json
+kinetic --config dast.prod.config.json
 ```
 
 ### Custom Detector Selection

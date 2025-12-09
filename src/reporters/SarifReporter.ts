@@ -24,7 +24,7 @@ export class SarifReporter extends BaseReporter {
   }
 
   private toSarif(result: ScanResult) {
-    const toolName = 'playwright_security';
+    const toolName = 'kinetic';
     const rulesMap: Record<string, any> = {};
     const results = result.vulnerabilities.map((v, idx) => {
       const ruleId = v.cwe || v.category || `VULN-${idx}`;

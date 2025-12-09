@@ -1,11 +1,11 @@
-# API Quick Reference
+# Kinetic API Quick Reference
 
-> Quick reference for Playwright Security Framework APIs
+> Quick reference for Kinetic Security Scanner APIs
 
 ## Installation
 
 ```bash
-npm install @tzigger/playwright-security --save-dev
+npm install @tzigger/kinetic --save-dev
 ```
 
 ---
@@ -17,7 +17,7 @@ npm install @tzigger/playwright-security --save-dev
 Main orchestrator for security scans.
 
 ```typescript
-import { ScanEngine } from '@tzigger/playwright-security';
+import { ScanEngine } from '@tzigger/kinetic';
 
 const engine = new ScanEngine();
 engine.registerScanner(scanner);
@@ -51,7 +51,7 @@ await engine.cleanup();
 Performs active testing with input manipulation.
 
 ```typescript
-import { ActiveScanner } from '@tzigger/playwright-security';
+import { ActiveScanner } from '@tzigger/kinetic';
 
 const scanner = new ActiveScanner();
 scanner.registerDetectors([detector1, detector2]);
@@ -68,7 +68,7 @@ engine.registerScanner(scanner);
 Performs passive analysis via network traffic interception.
 
 ```typescript
-import { PassiveScanner } from '@tzigger/playwright-security';
+import { PassiveScanner } from '@tzigger/kinetic';
 
 const scanner = new PassiveScanner();
 scanner.registerDetectors([detector1, detector2]);
@@ -87,7 +87,7 @@ engine.registerScanner(scanner);
 ### SqlInjectionDetector
 
 ```typescript
-import { SqlInjectionDetector } from '@tzigger/playwright-security';
+import { SqlInjectionDetector } from '@tzigger/kinetic';
 
 const detector = new SqlInjectionDetector();
 scanner.registerDetector(detector);
@@ -100,7 +100,7 @@ scanner.registerDetector(detector);
 ### XssDetector
 
 ```typescript
-import { XssDetector } from '@tzigger/playwright-security';
+import { XssDetector } from '@tzigger/kinetic';
 
 const detector = new XssDetector();
 scanner.registerDetector(detector);
@@ -113,7 +113,7 @@ scanner.registerDetector(detector);
 ### ErrorBasedDetector
 
 ```typescript
-import { ErrorBasedDetector } from '@tzigger/playwright-security';
+import { ErrorBasedDetector } from '@tzigger/kinetic';
 
 const detector = new ErrorBasedDetector();
 scanner.registerDetector(detector);
@@ -126,7 +126,7 @@ scanner.registerDetector(detector);
 ### SensitiveDataDetector (Passive)
 
 ```typescript
-import { SensitiveDataDetector } from '@tzigger/playwright-security';
+import { SensitiveDataDetector } from '@tzigger/kinetic';
 
 const detector = new SensitiveDataDetector();
 passiveScanner.registerDetector(detector);
@@ -140,7 +140,7 @@ passiveScanner.registerDetector(detector);
 ### HeaderSecurityDetector (Passive)
 
 ```typescript
-import { HeaderSecurityDetector } from '@tzigger/playwright-security';
+import { HeaderSecurityDetector } from '@tzigger/kinetic';
 
 const detector = new HeaderSecurityDetector();
 passiveScanner.registerDetector(detector);
@@ -154,7 +154,7 @@ passiveScanner.registerDetector(detector);
 ### CookieSecurityDetector (Passive)
 
 ```typescript
-import { CookieSecurityDetector } from '@tzigger/playwright-security';
+import { CookieSecurityDetector } from '@tzigger/kinetic';
 
 const detector = new CookieSecurityDetector();
 passiveScanner.registerDetector(detector);
@@ -168,7 +168,7 @@ passiveScanner.registerDetector(detector);
 ### InsecureTransmissionDetector (Passive)
 
 ```typescript
-import { InsecureTransmissionDetector } from '@tzigger/playwright-security';
+import { InsecureTransmissionDetector } from '@tzigger/kinetic';
 
 const detector = new InsecureTransmissionDetector();
 passiveScanner.registerDetector(detector);
@@ -186,7 +186,7 @@ passiveScanner.registerDetector(detector);
 ### JsonReporter
 
 ```typescript
-import { JsonReporter } from '@tzigger/playwright-security';
+import { JsonReporter } from '@tzigger/kinetic';
 
 engine.registerReporter(new JsonReporter());
 ```
@@ -196,7 +196,7 @@ engine.registerReporter(new JsonReporter());
 ### HtmlReporter
 
 ```typescript
-import { HtmlReporter } from '@tzigger/playwright-security';
+import { HtmlReporter } from '@tzigger/kinetic';
 
 engine.registerReporter(new HtmlReporter());
 ```
@@ -206,7 +206,7 @@ engine.registerReporter(new HtmlReporter());
 ### SarifReporter
 
 ```typescript
-import { SarifReporter } from '@tzigger/playwright-security';
+import { SarifReporter } from '@tzigger/kinetic';
 
 engine.registerReporter(new SarifReporter());
 ```
@@ -216,7 +216,7 @@ engine.registerReporter(new SarifReporter());
 ### ConsoleReporter
 
 ```typescript
-import { ConsoleReporter } from '@tzigger/playwright-security';
+import { ConsoleReporter } from '@tzigger/kinetic';
 
 engine.registerReporter(new ConsoleReporter());
 ```
@@ -232,7 +232,7 @@ engine.registerReporter(new ConsoleReporter());
 Tests for injection vulnerabilities (SQLi, XSS, command injection, etc.).
 
 ```typescript
-import { runActiveSecurityScan } from '@tzigger/playwright-security/testing';
+import { runActiveSecurityScan } from '@tzigger/kinetic/testing';
 
 const vulns = await runActiveSecurityScan(url, {
   detectors: 'all' | 'sql' | 'xss' | 'errors',
@@ -259,7 +259,7 @@ const vulns = await runActiveSecurityScan(url, {
 Analyzes traffic patterns (headers, data exposure, cookies, transmission security).
 
 ```typescript
-import { runPassiveSecurityScan } from '@tzigger/playwright-security/testing';
+import { runPassiveSecurityScan } from '@tzigger/kinetic/testing';
 
 const vulns = await runPassiveSecurityScan(url, {
   detectors: 'all' | 'headers' | 'transmission' | 'data' | 'cookies',
@@ -280,7 +280,7 @@ const vulns = await runPassiveSecurityScan(url, {
 ### assertNoVulnerabilities
 
 ```typescript
-import { assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/playwright-security/testing';
+import { assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/kinetic/testing';
 
 assertNoVulnerabilities(vulnerabilities, VulnerabilitySeverity.MEDIUM);
 ```
@@ -426,7 +426,7 @@ const config: ScanConfiguration = {
 ### Pattern 1: Basic Scan
 
 ```typescript
-import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/playwright-security';
+import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/kinetic';
 
 const engine = new ScanEngine();
 const scanner = new ActiveScanner();
@@ -442,7 +442,7 @@ await engine.cleanup();
 
 ```typescript
 import { test } from '@playwright/test';
-import { runActiveSecurityScan, assertNoVulnerabilities } from '@tzigger/playwright-security/testing';
+import { runActiveSecurityScan, assertNoVulnerabilities } from '@tzigger/kinetic/testing';
 
 test('security scan - active', async ({ page }) => {
   await page.goto('https://myapp.com');
@@ -458,7 +458,7 @@ test('security scan - active', async ({ page }) => {
 
 ```typescript
 import { test } from '@playwright/test';
-import { runPassiveSecurityScan, assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/playwright-security/testing';
+import { runPassiveSecurityScan, assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/kinetic/testing';
 
 test('security scan - passive', async () => {
   const vulns = await runPassiveSecurityScan('https://myapp.com', {
@@ -476,7 +476,7 @@ import {
   runActiveSecurityScan, 
   runPassiveSecurityScan,
   assertNoVulnerabilities 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 test('full security scan', async () => {
   // Fast passive scan first
@@ -496,7 +496,7 @@ test('full security scan', async () => {
 ### Pattern 3: Custom Detector
 
 ```typescript
-import { BaseDetector, VulnerabilityCategory, VulnerabilitySeverity } from '@tzigger/playwright-security';
+import { BaseDetector, VulnerabilityCategory, VulnerabilitySeverity } from '@tzigger/kinetic';
 
 class MyDetector extends BaseDetector {
   readonly id = 'my-detector';
@@ -557,25 +557,25 @@ const highConfidence = results.vulnerabilities.filter(v =>
 
 ```bash
 # Passive scan (fast, 3-5 seconds)
-dast-scan https://myapp.com --scan-type passive
+kinetic https://myapp.com --scan-type passive
 
 # Active scan (comprehensive, 30-120 seconds)
-dast-scan https://myapp.com --scan-type active
+kinetic https://myapp.com --scan-type active
 
 # Both passive and active
-dast-scan https://myapp.com --scan-type both
+kinetic https://myapp.com --scan-type both
 
 # With config file
-dast-scan --config ./config/default.config.json
+kinetic --config ./config/default.config.json
 
 # Multiple formats
-dast-scan https://myapp.com --formats json,html,sarif
+kinetic https://myapp.com --formats json,html,sarif
 
 # Specify output directory
-dast-scan https://myapp.com --output ./security-reports
+kinetic https://myapp.com --output ./security-reports
 
 # Parallel scanners
-dast-scan https://myapp.com --parallel 4
+kinetic https://myapp.com --parallel 4
 ```
 
 **Available Flags**:
@@ -594,13 +594,13 @@ dast-scan https://myapp.com --parallel 4
 
 ```typescript
 // Core
-import { ScanEngine, BrowserManager, ConfigurationManager } from '@tzigger/playwright-security';
+import { ScanEngine, BrowserManager, ConfigurationManager } from '@tzigger/kinetic';
 
 // Scanners
-import { ActiveScanner, PassiveScanner } from '@tzigger/playwright-security';
+import { ActiveScanner, PassiveScanner } from '@tzigger/kinetic';
 
 // Active Detectors
-import { SqlInjectionDetector, XssDetector, ErrorBasedDetector } from '@tzigger/playwright-security';
+import { SqlInjectionDetector, XssDetector, ErrorBasedDetector } from '@tzigger/kinetic';
 
 // Passive Detectors
 import { 
@@ -608,10 +608,10 @@ import {
   HeaderSecurityDetector, 
   CookieSecurityDetector, 
   InsecureTransmissionDetector 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 // Reporters
-import { JsonReporter, HtmlReporter, SarifReporter, ConsoleReporter } from '@tzigger/playwright-security';
+import { JsonReporter, HtmlReporter, SarifReporter, ConsoleReporter } from '@tzigger/kinetic';
 
 // Testing Helpers
 import { 
@@ -619,7 +619,7 @@ import {
   runPassiveSecurityScan, 
   assertNoVulnerabilities, 
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 // Types
 import type { 
@@ -629,7 +629,7 @@ import type {
   IDetector,
   IReporter,
   IScanner 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 // Enums
 import { 
@@ -637,7 +637,7 @@ import {
   VulnerabilityCategory,
   AggressivenessLevel,
   ReportFormat 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 ```
 
 ---
@@ -693,5 +693,5 @@ try {
 ## Support
 
 - 📖 Full Guide: [DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)
-- 🐛 Issues: https://github.com/Tzigger/playwright_security/issues
-- 💬 Discussions: https://github.com/Tzigger/playwright_security/discussions
+- 🐛 Issues: https://github.com/tzigger/kinetic/issues
+- 💬 Discussions: https://github.com/tzigger/kinetic/discussions

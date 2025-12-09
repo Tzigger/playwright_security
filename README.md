@@ -1,6 +1,6 @@
-# DAST Security Scanner
+# Kinetic Security Scanner
 
-> Automated Dynamic Application Security Testing (DAST) Engine using Playwright
+> High-performance Dynamic Application Security Testing (DAST) Engine powered by Playwright
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -9,7 +9,7 @@
 
 ## 🎯 Overview
 
-A powerful, modular, and extensible security testing framework that combines **passive network analysis** with **active vulnerability scanning** to detect security issues in web applications.
+**Kinetic** is a powerful, modular, and extensible security testing framework that combines **passive network analysis** with **active vulnerability scanning** to detect security issues in web applications.
 
 ### Key Features
 
@@ -48,10 +48,10 @@ A powerful, modular, and extensible security testing framework that combines **p
 
 ### For Framework Users
 
-Install the framework in your project:
+Install Kinetic in your project:
 
 ```bash
-npm install @tzigger/playwright-security --save-dev
+npm install @tzigger/kinetic --save-dev
 ```
 
 Use in your Playwright tests:
@@ -63,7 +63,7 @@ import {
   runPassiveSecurityScan,
   assertNoVulnerabilities,
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 // Example 1: Quick passive scan for security headers
 test('should have security headers', async () => {
@@ -105,14 +105,14 @@ test('full security scan', async () => {
 
 ---
 
-### Using the CLI Tool
+### Using the Kinetic CLI
 
-To use the `dast-scan` command globally:
+To use the `kinetic` command globally:
 
 ```bash
 # Clone and setup
-git clone https://github.com/Tzigger/playwright_security.git
-cd playwright_security
+git clone https://github.com/tzigger/kinetic.git
+cd kinetic
 npm install
 
 # Build the project
@@ -123,30 +123,30 @@ npm link
 # or
 sudo npm link
 
-# Now you can use dast-scan anywhere
-dast-scan --help
+# Now you can use kinetic anywhere
+kinetic --help
 ```
 
 Run scans with the CLI:
 
 ```bash
 # Passive scan (fast, non-intrusive)
-dast-scan https://example.com --scan-type passive
+kinetic https://example.com --scan-type passive
 
 # Active scan (comprehensive)
-dast-scan https://example.com --scan-type active
+kinetic https://example.com --scan-type active
 
 # Both passive and active
-dast-scan https://example.com --scan-type both
+kinetic https://example.com --scan-type both
 
 # With custom output and formats
-dast-scan https://example.com --output ./my-reports --formats html,json,sarif
+kinetic https://example.com --output ./my-reports --formats html,json,sarif
 
 # Use a configuration file
-dast-scan --config ./config/default.config.json
+kinetic --config ./config/default.config.json
 
 # Use a profile
-dast-scan https://example.com --config ./config/profiles/aggressive.json
+kinetic https://example.com --config ./config/profiles/aggressive.json
 ```
 
 ---
@@ -312,7 +312,7 @@ export class CustomDetector extends BaseDetector {
 
 ```
 ┌─────────────────────────────────────────────────┐
-│          Security Scan Report                    │
+│          Kinetic Security Scan Report           │
 ├─────────────────────────────────────────────────┤
 │ Target: https://example.com                      │
 │ Duration: 2m 34s                                 │

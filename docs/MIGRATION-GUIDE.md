@@ -1,10 +1,10 @@
-# Migration Guide
+# Kinetic Migration Guide
 
-> Guide for upgrading between versions of Playwright Security Framework
+> Guide for upgrading between versions of Kinetic Security Scanner
 
 ## Overview
 
-This guide helps you migrate your code when upgrading to new versions of the framework.
+This guide helps you migrate your code when upgrading to new versions of Kinetic.
 
 ---
 
@@ -16,14 +16,14 @@ If you're installing the framework for the first time:
 
 **Option 1: Framework Integration (for testing)**
 ```bash
-npm install @tzigger/playwright-security --save-dev
+npm install @tzigger/kinetic --save-dev
 ```
 
 **Option 2: CLI Tool (for standalone scanning)**
 ```bash
 # Clone the repository
-git clone https://github.com/Tzigger/playwright_security.git
-cd playwright_security
+git clone https://github.com/tzigger/kinetic.git
+cd kinetic
 
 # Install dependencies
 npm install
@@ -36,33 +36,33 @@ npm link
 # or
 sudo npm link
 
-# Now you can use dast-scan anywhere
-dast-scan --help
+# Now you can use kinetic anywhere
+kinetic --help
 ```
 
 See [Developer Guide](./DEVELOPER-GUIDE.md) for complete setup instructions.
 
 ### Package Name Change
 
-**⚠️ Breaking Change**: Package renamed from `playwright_security` to `@tzigger/playwright-security`
+**⚠️ Breaking Change**: Package renamed from `kinetic` to `@tzigger/kinetic`
 
 **Before**:
 ```bash
-npm install playwright_security
+npm install kinetic
 ```
 
 **After**:
 ```bash
-npm install @tzigger/playwright-security
+npm install @tzigger/kinetic
 ```
 
 **Update imports**:
 ```typescript
 // ❌ Old (will not work)
-import { ScanEngine } from 'playwright_security';
+import { ScanEngine } from 'kinetic';
 
 // ✅ New (scoped package)
-import { ScanEngine } from '@tzigger/playwright-security';
+import { ScanEngine } from '@tzigger/kinetic';
 ```
 
 ### API Changes
@@ -81,7 +81,7 @@ import {
   runPassiveSecurityScan,
   assertNoVulnerabilities,
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 ```
 
 **Note**: The framework now provides separate helpers for active and passive scanning:
@@ -156,7 +156,7 @@ Use exact versions in `package.json` to avoid unexpected breaking changes:
 ```json
 {
   "devDependencies": {
-    "@tzigger/playwright-security": "0.1.0-beta.1"
+    "@tzigger/kinetic": "0.1.0-beta.1"
   }
 }
 ```
@@ -167,7 +167,7 @@ Always review [CHANGELOG.md](../CHANGELOG.md) before upgrading:
 
 ```bash
 # View changelog
-cat node_modules/@tzigger/playwright-security/CHANGELOG.md
+cat node_modules/@tzigger/kinetic/CHANGELOG.md
 ```
 
 ### 3. Test Before Deploying
@@ -176,7 +176,7 @@ Test the upgrade in a development environment first:
 
 ```bash
 # Install new version in dev
-npm install @tzigger/playwright-security@latest --save-dev
+npm install @tzigger/kinetic@latest --save-dev
 
 # Run your security tests
 npm test
@@ -219,7 +219,7 @@ If you encounter issues during migration:
 
 1. Check [CHANGELOG.md](../CHANGELOG.md) for breaking changes
 2. Review [Developer Guide](./DEVELOPER-GUIDE.md) for updated examples
-3. Search [GitHub Issues](https://github.com/Tzigger/playwright_security/issues)
+3. Search [GitHub Issues](https://github.com/tzigger/kinetic/issues)
 4. Open a new issue if needed
 
 ---
@@ -248,21 +248,21 @@ If you encounter issues during migration:
 
 **Error**:
 ```
-Cannot find module 'playwright_security'
+Cannot find module 'kinetic'
 ```
 
 **Solution**:
 Update package name to scoped version:
 ```bash
-npm uninstall playwright_security
-npm install @tzigger/playwright-security --save-dev
+npm uninstall kinetic
+npm install @tzigger/kinetic --save-dev
 ```
 
 ### Issue 2: Import Errors
 
 **Error**:
 ```
-Module '"@tzigger/playwright-security"' has no exported member 'runSecurityScan'
+Module '"@tzigger/kinetic"' has no exported member 'runSecurityScan'
 ```
 
 **Solution**:
@@ -272,7 +272,7 @@ import {
   runActiveSecurityScan,
   runPassiveSecurityScan,
   assertNoVulnerabilities 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 ```
 
 **Note**: `runSecurityScan()` was split into `runActiveSecurityScan()` and `runPassiveSecurityScan()` for better control.
@@ -297,7 +297,7 @@ If you need to rollback to a previous version:
 
 ```bash
 # Rollback to specific version
-npm install @tzigger/playwright-security@0.1.0 --save-dev
+npm install @tzigger/kinetic@0.1.0 --save-dev
 
 # Or use package-lock.json
 git checkout HEAD -- package-lock.json
@@ -310,7 +310,7 @@ npm ci
 
 ### Subscribe to Releases
 
-1. Go to https://github.com/Tzigger/playwright_security
+1. Go to https://github.com/tzigger/kinetic
 2. Click "Watch" → "Custom" → "Releases"
 3. You'll be notified of new versions
 
@@ -318,10 +318,10 @@ npm ci
 
 ```bash
 # Check for updates
-npm outdated @tzigger/playwright-security
+npm outdated @tzigger/kinetic
 
 # Update to latest version
-npm update @tzigger/playwright-security
+npm update @tzigger/kinetic
 ```
 
 ---
@@ -340,28 +340,28 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 ## CLI Tool Usage
 
-### Using dast-scan Command
+### Using kinetic Command
 
-After installation via `npm link`, you can use the `dast-scan` command:
+After installation via `npm link`, you can use the `kinetic` command:
 
 ```bash
 # Passive scan (fast, 3-5 seconds)
-dast-scan https://example.com --scan-type passive
+kinetic https://example.com --scan-type passive
 
 # Active scan (comprehensive, 30-120 seconds)
-dast-scan https://example.com --scan-type active
+kinetic https://example.com --scan-type active
 
 # Both passive and active
-dast-scan https://example.com --scan-type both
+kinetic https://example.com --scan-type both
 
 # Custom output and formats
-dast-scan https://example.com --output ./reports --formats html,json,sarif
+kinetic https://example.com --output ./reports --formats html,json,sarif
 
 # Use a configuration file
-dast-scan --config ./config/default.config.json
+kinetic --config ./config/default.config.json
 
 # Use a profile
-dast-scan https://example.com --config ./config/profiles/aggressive.json
+kinetic https://example.com --config ./config/profiles/aggressive.json
 ```
 
 ### CLI Flags Reference
@@ -379,12 +379,12 @@ dast-scan https://example.com --config ./config/profiles/aggressive.json
 
 ### Unlinking the CLI
 
-If you need to uninstall the global `dast-scan` command:
+If you need to uninstall the global `kinetic` command:
 
 ```bash
-npm unlink -g @tzigger/playwright-security
+npm unlink -g @tzigger/kinetic
 # or
-sudo npm unlink -g @tzigger/playwright-security
+sudo npm unlink -g @tzigger/kinetic
 ```
 
 ---

@@ -1,10 +1,10 @@
-# Documentation Index
+# Kinetic Documentation
 
-Welcome to the Playwright Security Framework documentation!
+Welcome to the Kinetic Security Scanner documentation!
 
 ## 📖 Getting Started
 
-New to the framework? Start here:
+New to Kinetic? Start here:
 
 1. **[Testing Guide](./TESTING-GUIDE.md)** ⭐ **Start Here!**
    - How to write security tests easily
@@ -130,7 +130,7 @@ Want to contribute to the framework?
 ```typescript
 // tests/security.spec.ts
 import { test, expect } from '@playwright/test';
-import { runActiveSecurityScan } from '@tzigger/playwright-security';
+import { runActiveSecurityScan } from '@tzigger/kinetic';
 
 test('app security', async ({ page }) => {
   await page.goto('https://myapp.com');
@@ -144,7 +144,7 @@ test('app security', async ({ page }) => {
 ### Use Case 2: Programmatic Security Scanning
 
 ```typescript
-import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/playwright-security';
+import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/kinetic';
 
 const engine = new ScanEngine();
 const scanner = new ActiveScanner();
@@ -160,7 +160,7 @@ const results = await engine.scan();
 ### Use Case 3: Custom Vulnerability Detection
 
 ```typescript
-import { BaseDetector, VulnerabilityCategory } from '@tzigger/playwright-security';
+import { BaseDetector, VulnerabilityCategory } from '@tzigger/kinetic';
 
 class MyDetector extends BaseDetector {
   readonly id = 'my-detector';
@@ -173,8 +173,8 @@ class MyDetector extends BaseDetector {
 
 ## 📝 Additional Resources
 
-- **Main Repository**: https://github.com/Tzigger/playwright_security
-- **Issues**: https://github.com/Tzigger/playwright_security/issues
+- **Main Repository**: https://github.com/tzigger/kinetic
+- **Issues**: https://github.com/tzigger/kinetic/issues
 - **Changelog**: [CHANGELOG.md](../CHANGELOG.md)
 - **License**: [LICENSE](../LICENSE)
 
@@ -182,8 +182,8 @@ class MyDetector extends BaseDetector {
 
 1. **Check the docs**: Most questions are answered in the [Developer Guide](./DEVELOPER-GUIDE.md)
 2. **Search issues**: Someone might have had the same question
-3. **Ask questions**: Open a [discussion](https://github.com/Tzigger/playwright_security/discussions)
-4. **Report bugs**: Open an [issue](https://github.com/Tzigger/playwright_security/issues)
+3. **Ask questions**: Open a [discussion](https://github.com/tzigger/kinetic/discussions)
+4. **Report bugs**: Open an [issue](https://github.com/tzigger/kinetic/issues)
 
 ## 📊 Documentation Stats
 

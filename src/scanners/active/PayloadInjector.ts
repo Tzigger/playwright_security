@@ -2,6 +2,7 @@ import { Logger } from '../../utils/logger/Logger';
 import { LogLevel } from '../../types/enums';
 import { Page } from 'playwright';
 import { AttackSurface, AttackSurfaceType, InjectionContext } from './DomExplorer';
+import { SPAContentWaiter, SPAFramework } from '../../utils/spa/SPAContentWaiter';
 
 /**
  * Strategie de injecție
@@ -50,12 +51,36 @@ export interface InjectionResult {
  * - Encoding și obfuscation
  * - Strategii de fuzzing
  * - WAF bypass techniques
+ * 
+ * ENHANCED: Added SPA-aware waiting and longer timeouts
  */
 export class PayloadInjector {
   protected logger: Logger;
+  protected spaWaiter: SPAContentWaiter;
+  protected detectedFramework: SPAFramework = SPAFramework.UNKNOWN;
+
+  // ENHANCED: Configurable timeouts (increased from 3s to 10s default)
+  public static readonly DEFAULT_SPA_TIMEOUT = 10000;
+  public static readonly DEFAULT_NETWORK_TIMEOUT = 10000;
 
   constructor(logLevel: LogLevel = LogLevel.INFO) {
     this.logger = new Logger(logLevel, 'PayloadInjector');
+    this.spaWaiter = new SPAContentWaiter({
+      maxTimeout: PayloadInjector.DEFAULT_SPA_TIMEOUT,
+      minStableTime: 800,
+      waitForNetworkIdle: true,
+      waitForAnimations: true,
+    }, logLevel);
+  }
+
+  /**
+   * Detect SPA framework for optimized waiting
+   */
+  public async detectSPAFramework(page: Page): Promise<SPAFramework> {
+    const detection = await this.spaWaiter.detectFramework(page);
+    this.detectedFramework = detection.framework;
+    this.logger.info(`Detected SPA framework: ${detection.framework} (confidence: ${detection.confidence}%)`);
+    return detection.framework;
   }
 
   /**
@@ -76,7 +101,8 @@ export class PayloadInjector {
     const strategy = options.strategy || InjectionStrategy.REPLACE;
     const submit = options.submit !== undefined ? options.submit : true;
 
-    this.logger.debug(`Injecting payload into ${surface.name} (${surface.type})`);
+    this.logger.info(`[Inject] ${surface.type}:${surface.name} <- payload (${payload.length} chars, encoding:${encoding}, strategy:${strategy})`);
+    this.logger.debug(`[Inject] Raw payload: ${payload.substring(0, 100)}${payload.length > 100 ? '...' : ''}`);
 
     // Create result object early for potential early returns
     const result: InjectionResult = {
@@ -137,9 +163,11 @@ export class PayloadInjector {
 
       // 1. Encode payload
       const encodedPayload = this.encodePayload(payload, encoding);
+      this.logger.debug(`[Inject] Encoded payload: ${encodedPayload.substring(0, 100)}${encodedPayload.length > 100 ? '...' : ''}`);
 
       // 2. Apply injection strategy
       const finalPayload = this.applyStrategy(surface.value || '', encodedPayload, strategy);
+      this.logger.debug(`[Inject] Final payload after strategy: ${finalPayload.substring(0, 100)}${finalPayload.length > 100 ? '...' : ''}`);
 
       // 3. Inject based on surface type
       const startTime = Date.now();
@@ -177,17 +205,26 @@ export class PayloadInjector {
           headers: apiResponse.headers,
           timing: endTime - startTime,
         };
+        this.logger.debug(`[Inject] API Response: status=${apiResponse.status}, bodyLen=${apiResponse.body.length}, time=${endTime - startTime}ms`);
       } else {
-        // 4. Wait for response and capture (with short timeout)
-        await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+        // ENHANCED: Use SPA-aware waiting instead of fixed 3s timeout
+        // Wait for SPA content to stabilize (framework-specific)
+        await this.spaWaiter.waitForContent(page, {
+          framework: this.detectedFramework,
+        }).catch(() => {});
+
+        // Fallback to network idle with longer timeout
+        await page.waitForLoadState('networkidle', { timeout: PayloadInjector.DEFAULT_NETWORK_TIMEOUT }).catch(() => {});
         
+        const body = await page.content();
         result.response = {
           url: page.url(),
           status: 200, // Will be updated from network monitoring
-          body: await page.content(),
+          body: body,
           headers: {},
           timing: endTime - startTime,
         };
+        this.logger.debug(`[Inject] Page Response: url=${page.url()}, bodyLen=${body.length}, time=${endTime - startTime}ms`);
       }
 
     } catch (error) {
@@ -218,15 +255,17 @@ export class PayloadInjector {
     }
     
     const method = (surface.metadata['method'] as string) || 'GET';
+    const originalHeaders = (surface.metadata['headers'] as Record<string, string>) || undefined;
     
     let response;
     
     if (surface.type === AttackSurfaceType.API_PARAM) {
       const apiUrl = new URL(url);
       apiUrl.searchParams.set(surface.name, payload);
+      const headers = originalHeaders && Object.keys(originalHeaders).length > 0 ? originalHeaders : undefined;
       response = await page.request.fetch(apiUrl.toString(), {
         method,
-        headers: { 'Content-Type': 'application/json' }
+        headers,
       });
     } else if (surface.type === AttackSurfaceType.JSON_BODY) {
       const originalBody = surface.metadata['originalBody'];
@@ -293,6 +332,7 @@ export class PayloadInjector {
       maxConcurrent?: number;
     } = {}
   ): Promise<InjectionResult[]> {
+    this.logger.info(`[InjectMultiple] ${surface.type}:${surface.name} <- ${payloads.length} payloads`);
     const results: InjectionResult[] = [];
     const delayMs = options.delayMs ?? 100;
     const maxConcurrent = Math.max(1, options.maxConcurrent ?? 1);

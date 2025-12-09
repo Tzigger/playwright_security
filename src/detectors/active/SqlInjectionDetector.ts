@@ -6,7 +6,7 @@ import { AttackSurface, InjectionContext, AttackSurfaceType } from '../../scanne
 import { PayloadInjector, InjectionResult, PayloadEncoding } from '../../scanners/active/PayloadInjector';
 import { getOWASP2025Category } from '../../utils/cwe/owasp-2025-mapping';
 import { Logger } from '../../utils/logger/Logger';
-import { SQL_ERROR_PATTERNS, categorizeError, findErrorPatterns } from '../../utils/patterns/error-patterns';
+import { SQL_ERROR_PATTERNS, categorizeError, findErrorPatterns, BWAPP_SQL_PATTERNS, containsErrorPatternPermissive } from '../../utils/patterns/error-patterns';
 
 interface TechniqueTimeouts {
   authBypass: number;
@@ -26,6 +26,7 @@ interface SqlInjectionDetectorConfig {
   enableTimeBased?: boolean;
   maxSurfacesPerPage?: number;
   skipTimeBasedWhenErrorBasedSucceeds?: boolean;
+  permissiveMode?: boolean;
 }
 
 type ResolvedSqlInjectionDetectorConfig = Required<
@@ -58,6 +59,7 @@ const DEFAULT_SQLI_DETECTOR_CONFIG: ResolvedSqlInjectionDetectorConfig = {
   enableTimeBased: true,
   maxSurfacesPerPage: 4,
   skipTimeBasedWhenErrorBasedSucceeds: true,
+  permissiveMode: false,
 };
 
 /**
@@ -110,10 +112,18 @@ export class SqlInjectionDetector implements IActiveDetector {
     this.injector = new PayloadInjector();
     this.logger = new Logger(LogLevel.INFO, 'SqlInjectionDetector');
     this.config = this.mergeConfig(DEFAULT_SQLI_DETECTOR_CONFIG, config);
+    
+    // Auto-adjust confidence for permissive mode if not explicitly set by caller
+    if (this.config.permissiveMode && config.minConfidenceForEarlyExit === undefined) {
+        this.config.minConfidenceForEarlyExit = 0.6;
+    }
   }
 
   public updateConfig(config: Partial<SqlInjectionDetectorConfig>): void {
     this.config = this.mergeConfig(this.config, config);
+    if (this.config.permissiveMode) {
+        this.config.minConfidenceForEarlyExit = Math.min(this.config.minConfidenceForEarlyExit, 0.6);
+    }
   }
 
   private mergeConfig(
@@ -435,6 +445,7 @@ export class SqlInjectionDetector implements IActiveDetector {
    */
   private async testErrorBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
     const payloads = this.getUniquePayloads(surface, this.getContextualPayloads(surface, SqlInjectionTechnique.ERROR_BASED));
+    this.logger.debug(`[SQLi] testErrorBased: testing ${payloads.length} payloads on ${surface.name}`);
 
     const results = await this.injector.injectMultiple(page, surface, payloads, {
       encoding: PayloadEncoding.NONE,
@@ -444,6 +455,7 @@ export class SqlInjectionDetector implements IActiveDetector {
       maxConcurrent: 1,
     });
 
+    this.logger.debug(`[SQLi] testErrorBased: got ${results.length} results`);
     for (const result of results) {
       const errorInfo = this.hasSqlError(result);
       if (errorInfo.hasError) {
@@ -504,9 +516,11 @@ export class SqlInjectionDetector implements IActiveDetector {
     const avgFalseLength = falseLengths.reduce((a, b) => a + b, 0) / falseLengths.length;
 
     const diff = Math.abs(avgTrueLength - avgFalseLength);
-    const threshold = Math.max(avgTrueLength, avgFalseLength) * 0.1;
+    const threshold = Math.max(avgTrueLength, avgFalseLength) * (this.config.permissiveMode ? 0.05 : 0.1);
 
-    if (diff > threshold && diff > 100 && trueResults[0]) {
+    if (diff > threshold && (diff > 100 || (this.config.permissiveMode && diff > 20)) && trueResults[0]) {
+       // Log metrics for debugging
+       this.logger.debug(`[SQLi] Boolean diff: true=${avgTrueLength}, false=${avgFalseLength}, diff=${diff}, threshold=${threshold}`);
       return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl, {
         confidence: this.getTechniqueConfidence(SqlInjectionTechnique.BOOLEAN_BASED),
       });
@@ -627,7 +641,16 @@ export class SqlInjectionDetector implements IActiveDetector {
   private getMatchedErrorPatterns(result: InjectionResult): string[] {
     const body = result.response?.body || '';
     const matches = findErrorPatterns(body);
-    const sqlMatches = matches.filter((m) => SQL_ERROR_PATTERNS.some((p) => p.source === m.pattern.source));
+    let sqlMatches = matches.filter((m) => SQL_ERROR_PATTERNS.some((p) => p.source === m.pattern.source));
+    
+    if (this.config.permissiveMode && sqlMatches.length === 0) {
+        // Try permissive patterns
+        if (containsErrorPatternPermissive(body)) {
+             const permissiveMatches = BWAPP_SQL_PATTERNS.filter(p => p.test(body));
+             return permissiveMatches.map(p => p.source);
+        }
+    }
+    
     return sqlMatches.map((m) => m.pattern.source);
   }
 
@@ -635,6 +658,10 @@ export class SqlInjectionDetector implements IActiveDetector {
     const patterns = this.getMatchedErrorPatterns(result);
     const body = result.response?.body || '';
     const category = categorizeError(body) || undefined;
+    this.logger.debug(`[SQLi] hasSqlError check: payload="${result.payload?.substring(0, 50)}", bodyLen=${body.length}, matchedPatterns=${patterns.length}, category=${category || 'none'}`);
+    if (patterns.length > 0) {
+      this.logger.debug(`[SQLi] Matched error patterns: ${patterns.join(', ')}`);
+    }
     return { hasError: patterns.length > 0, patterns, category };
   }
 
@@ -733,11 +760,17 @@ export class SqlInjectionDetector implements IActiveDetector {
   private getContextualPayloads(surface: AttackSurface, technique: SqlInjectionTechnique): string[] {
     const context = this.determineInjectionContext(surface);
 
-    const numericErrorPayloads = ["1'", '1 OR 1=1--', "1' OR '1'='1"];
-    const stringErrorPayloads = ["'", "' OR '1'='1", "' OR 1=1--"];
+    const numericErrorPayloads = ["1'", "1 OR 1=1", "1' OR '1'='1", '1 OR 1=1--', "1' OR '1'='1--"];
+    const stringErrorPayloads = ["'", "' OR '1'='1", "' OR '1'='1'--", "' OR 1=1--", "' OR 'x'='x"];
 
     const numericTime = ["1' AND SLEEP(2)--", "1'; WAITFOR DELAY '0:0:2'--", "1'||pg_sleep(2)--"];
     const stringTime = ["' AND SLEEP(2)--", "'; WAITFOR DELAY '0:0:2'--", "'||pg_sleep(2)--"];
+
+    if (this.config.permissiveMode) {
+        // Add specific bWAPP/MySQL payloads
+        stringErrorPayloads.unshift("' OR 1=1#", "' OR '1'='1");
+        numericErrorPayloads.unshift("1 OR 1=1", "1 OR 1=1#");
+    }
 
     switch (technique) {
       case SqlInjectionTechnique.ERROR_BASED:
@@ -803,11 +836,11 @@ export class SqlInjectionDetector implements IActiveDetector {
   }
 
   private logTechniqueStart(technique: SqlInjectionTechnique | 'auth-bypass', surface: AttackSurface): void {
-    this.logger.debug(`[SQLi] Start ${technique} on ${surface.name}`);
+    this.logger.info(`[SQLi] Start ${technique} on ${surface.name} (type:${surface.type}, context:${surface.context})`);
   }
 
   private logTechniqueResult(technique: SqlInjectionTechnique | 'auth-bypass', success: boolean, duration: number): void {
-    this.logger.debug(`[SQLi] Result ${technique}: ${success ? 'VULN' : 'no'} in ${duration}ms`);
+    this.logger.info(`[SQLi] Result ${technique}: ${success ? 'VULN FOUND' : 'clean'} in ${duration}ms`);
   }
 
   /**
@@ -994,6 +1027,16 @@ export class SqlInjectionDetector implements IActiveDetector {
     if (technique === SqlInjectionTechnique.TIME_BASED && additionalData?.timing) {
       confidence = Math.max(confidence, 0.7);
     }
+    if (result.response?.status && result.response.status >= 500) {
+      confidence = Math.min(1, confidence + 0.05);
+    }
+    
+    if (this.config.permissiveMode) {
+        if (technique === SqlInjectionTechnique.ERROR_BASED && additionalData?.matchedPatterns?.length) {
+            confidence = Math.min(1, confidence + 0.1);
+        }
+    }
+    
     return confidence;
   }
 

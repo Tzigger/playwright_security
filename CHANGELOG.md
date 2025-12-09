@@ -5,49 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-12-04
+## [0.2.0] - 2025-12-09
 
-### 🎯 Focus: Reducerea False Positives/Negatives
+### 🚀 Major Changes
 
-Această versiune se concentrează pe îmbunătățirea acurateței prin Active Verification și stabilizarea execuției pe aplicații SPA.
+#### Rebranding to Kinetic
+- Project renamed from "DAST Security Scanner" to **Kinetic** (`@tzigger/kinetic`)
+- CLI command changed to `kinetic`
+- Complete documentation overhaul to reflect new branding
+- Updated all package references and configuration files
 
-### ✨ Added
+#### Element Scanner
+- Added specialized `ElementScanner` for focused testing of individual DOM elements
+- Support for `ElementScanConfig` to target specific inputs/forms
+- Integration with `DomExplorer` for precise attack surface identification
 
-#### Active Verification System (v0.2)
-- **VerificationEngine**: Orchestrator pentru verificarea vulnerabilităților
-  - Suport pentru 4 nivele de verificare: NONE, BASIC, STANDARD, FULL
-  - Confidence scoring (0-1) bazat pe rezultatele verificării
-  - Filtrare automată a false positives
+### 🛠 Improvements
+
+#### Test Suite Cleanup
+- Removed obsolete and duplicate test files
+- Fixed TypeScript errors in remaining tests
+- Improved test reliability and organization
+
+#### Active Verification System
+- **VerificationEngine**: Orchestrator for vulnerability verification
+  - Support for 4 verification levels: NONE, BASIC, STANDARD, FULL
+  - Confidence scoring (0-1) based on verification results
+  - Automatic false positive filtering
   
-- **TimeBasedVerifier**: Verificare prin timing analysis
-  - Măsurare baseline cu multiple samples
-  - Detecție statistică a delay-urilor (SQL SLEEP, Command injection sleep)
-  - Reducerea false positives pentru time-based SQLi
+- **TimeBasedVerifier**: Verification via timing analysis
+  - Baseline measurement with multiple samples
+  - Statistical detection of delays (SQL SLEEP, Command injection sleep)
+  - Reduced false positives for time-based SQLi
 
-- **ResponseDiffVerifier**: Verificare prin compararea răspunsurilor
+- **ResponseDiffVerifier**: Verification via response comparison
   - Boolean-based payload pairs (true/false conditions)
   - Error pattern detection
   - XSS reflection verification
 
-- **ReplayVerifier**: Verificare de bază prin re-executare payload
+- **ReplayVerifier**: Basic verification via payload re-execution
 
-#### Timeout Handling System (v0.2)
-- **TimeoutManager**: Management inteligent al timeout-urilor
-  - Strategii: FIXED, ADAPTIVE, SPA_AWARE
-  - Adaptive learning din pattern-urile de răspuns
+#### Timeout Handling System
+- **TimeoutManager**: Intelligent timeout management
+  - Strategies: FIXED, ADAPTIVE, SPA_AWARE
+  - Adaptive learning from response patterns
   - Per-operation timeout configuration
-  - Progress tracking cu callbacks
-  - Abort controller pentru operații long-running
+  - Progress tracking with callbacks
+  - Abort controller for long-running operations
 
-- **SPAWaitStrategy**: Strategii specifice pentru SPA frameworks
-  - Detecție automată framework: Angular, React, Vue, Svelte
+- **SPAWaitStrategy**: Specific strategies for SPA frameworks
+  - Automatic framework detection: Angular, React, Vue, Svelte
   - Angular: Zone.js stability detection
   - React: Scheduler idle / requestIdleCallback
   - Vue: Vue.nextTick completion
   - DOM mutation observer fallback
 
 #### New Types
-- `verification.ts`: Tipuri pentru sistemul de verificare
+- `verification.ts`: Types for the verification system
   - VerificationLevel, VerificationStatus, VerificationConfig
   - VerificationResult, VerificationAttempt
   - IVulnerabilityVerifier interface
@@ -57,7 +71,7 @@ Această versiune se concentrează pe îmbunătățirea acurateței prin Active 
   - TimeoutConfig, AdaptiveTimeoutState
   - SPAStabilityResult, SPAWaitCondition
 
-### 📊 Îmbunătățiri Metrici Țintă
+### � Îmbunătățiri Metrici Țintă
 | Metric | v0.1 | v0.2 Target |
 |--------|------|-------------|
 | False Positive Rate | ~15% | < 5% |
@@ -91,7 +105,7 @@ tests/unit/
 └── verification-timeout.test.ts
 ```
 
-### 🔧 Changed
+### � Changed
 - `tsconfig.json`: Adăugat "DOM" la lib pentru suport tipuri browser
 - `src/types/index.ts`: Export-uri pentru noile module
 
@@ -150,7 +164,7 @@ The first public beta release of Playwright Security! This release includes core
 - `--config` flag for JSON configuration files
 - Multiple output formats: `--formats console,json,html,sarif`
 - Parallel execution: `--parallel <n>`
-- Binary: `dast-scan` command
+- Binary: `kinetic` command
 
 #### Playwright Integration
 - **Testing Helpers**: `runSecurityScan()`, `assertNoVulnerabilities()`
@@ -212,17 +226,17 @@ This is the first beta release. Breaking changes expected in future versions.
 
 **NPM Installation:**
 ```bash
-npm install @tzigger/playwright-security@0.1.0-beta.1
+npm install @tzigger/kinetic@0.1.0-beta.1
 ```
 
 **CLI Usage:**
 ```bash
-npx dast-scan https://example.com --formats console,json,html
+npx kinetic https://example.com --formats console,json,html
 ```
 
 **Playwright Tests:**
 ```typescript
-import { runSecurityScan, VulnerabilitySeverity } from '@tzigger/playwright-security';
+import { runSecurityScan, VulnerabilitySeverity } from '@tzigger/kinetic';
 
 test('security test', async ({ page }) => {
   const vulns = await runSecurityScan(page.url());
@@ -253,4 +267,4 @@ test('security test', async ({ page }) => {
 
 ---
 
-[0.1.0-beta.1]: https://github.com/Tzigger/playwright_security/releases/tag/v0.1.0-beta.1
+[0.1.0-beta.1]: https://github.com/tzigger/kinetic/releases/tag/v0.1.0-beta.1

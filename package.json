@@ -1,11 +1,11 @@
 {
-  "name": "@tzigger/playwright-security",
-  "version": "0.1.0-beta.1",
-  "description": "Automated DAST (Dynamic Application Security Testing) framework built on Playwright for security testing and vulnerability detection",
+  "name": "@tzigger/kinetic",
+  "version": "0.2.0",
+  "description": "Kinetic - High-performance Dynamic Application Security Testing (DAST) engine built on Playwright",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "dast-scan": "dist/cli/index.js"
+    "kinetic": "dist/cli/index.js"
   },
   "files": [
     "dist/**/*",
@@ -38,6 +38,7 @@
     "test:phase2": "npx playwright test tests/integration/phase2-comprehensive.test.ts --reporter=list --project=chromium"
   },
   "keywords": [
+    "kinetic",
     "dast",
     "security",
     "testing",

@@ -9,6 +9,8 @@ export * from './logger/Logger';
 export * from './helpers/dom-helpers';
 export * from './helpers/network-helpers';
 export * from './helpers/common-helpers';
+export * from './helpers/statistical-helpers';
+export * from './helpers/response-comparison';
 
 // Patterns
 export * from './patterns/sensitive-data-patterns';

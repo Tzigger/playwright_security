@@ -43,6 +43,19 @@ export const SQL_ERROR_PATTERNS = [
 ];
 
 /**
+ * Relaxed SQL error patterns for testing (bWAPP)
+ */
+export const BWAPP_SQL_PATTERNS = [
+  /Warning:.*mysql/i,
+  /mysqli_.*\(\).*expects/i,
+  /Undefined index:/i,
+  /syntax.*near/i,
+  /You have an error in your SQL syntax/i,
+  /mysql_fetch_array/i,
+  /mysql_num_rows/i,
+];
+
+/**
  * Generic application error patterns
  */
 export const APPLICATION_ERROR_PATTERNS = [
@@ -167,6 +180,13 @@ export function findErrorPatterns(text: string): { pattern: RegExp; matches: str
   }
   
   return results;
+}
+
+/**
+ * Check if text contains error patterns (permissive mode)
+ */
+export function containsErrorPatternPermissive(text: string): boolean {
+  return containsErrorPattern(text) || BWAPP_SQL_PATTERNS.some(pattern => pattern.test(text));
 }
 
 /**

@@ -14,14 +14,31 @@ import {
   IVulnerabilityVerifier,
   TimingAnalysis,
   ResponseDiff,
+  ErrorMatchResult,
 } from '../../types/verification';
 import { PayloadInjector, InjectionResult, PayloadEncoding } from '../../scanners/active/PayloadInjector';
 import { AttackSurface, AttackSurfaceType, InjectionContext } from '../../scanners/active/DomExplorer';
+import {
+  deepJsonDiff,
+  calculateContentSimilarity,
+  detectEncoding,
+  matchErrorPatterns,
+  normalizeResponse,
+} from '../../utils/helpers/response-comparison';
+import { calculateStructuralSimilarity } from '../../utils/helpers/statistical-helpers';
+import {
+  SQL_ERROR_PATTERNS,
+  COMMAND_INJECTION_ERROR_PATTERNS,
+  STACK_TRACE_PATTERNS,
+  PATH_DISCLOSURE_PATTERNS,
+  APPLICATION_ERROR_PATTERNS,
+} from '../../utils/patterns/error-patterns';
 
 /**
  * Abstract base class for all vulnerability verifiers
  */
 export abstract class BaseVerifier implements IVulnerabilityVerifier {
+  abstract readonly id: string;
   abstract readonly name: string;
   abstract readonly supportedTypes: string[];
   
@@ -136,49 +153,63 @@ export abstract class BaseVerifier implements IVulnerabilityVerifier {
         diffType: 'content',
         similarity: 1,
         differences: ['Unable to compare: missing response'],
+        structuralSimilarity: 1,
+        contentSimilarity: 1,
       };
     }
 
     const differences: string[] = [];
-    let similarity = 1;
 
-    // Compare status codes
+    // Normalize bodies to reduce noise
+    const baselineBody = normalizeResponse(baseline.response.body || '');
+    const payloadBody = normalizeResponse(withPayload.response.body || '');
+
+    // Status comparison
     if (baseline.response.status !== withPayload.response.status) {
       differences.push(`Status: ${baseline.response.status} -> ${withPayload.response.status}`);
-      similarity -= 0.3;
     }
 
-    // Compare response length
-    const baselineLength = baseline.response.body?.length || 0;
-    const payloadLength = withPayload.response.body?.length || 0;
-    const lengthDiff = Math.abs(baselineLength - payloadLength);
-    const lengthRatio = lengthDiff / Math.max(baselineLength, payloadLength, 1);
-    
-    if (lengthRatio > 0.1) {
-      differences.push(`Length: ${baselineLength} -> ${payloadLength} (${(lengthRatio * 100).toFixed(1)}% change)`);
-      similarity -= lengthRatio * 0.5;
-    }
-
-    // Compare timing
+    // Timing comparison
     const timingDiff = Math.abs((baseline.response.timing || 0) - (withPayload.response.timing || 0));
     if (timingDiff > 1000) {
       differences.push(`Timing: ${baseline.response.timing}ms -> ${withPayload.response.timing}ms`);
-      similarity -= 0.1;
     }
 
-    // Determine primary difference type
-    let diffType: ResponseDiff['diffType'] = 'content';
-    if (baseline.response.status !== withPayload.response.status) {
-      diffType = 'status';
-    } else if (timingDiff > 1000) {
-      diffType = 'timing';
+    // Content similarity
+    const contentSimilarity = calculateContentSimilarity(baselineBody, payloadBody);
+    if (contentSimilarity < 0.9) {
+      differences.push(`Content similarity ${(contentSimilarity * 100).toFixed(1)}%`);
     }
+
+    // Attempt structural JSON comparison
+    let structuralSimilarity = 1;
+    let jsonChanges;
+    try {
+      const jsonA = JSON.parse(baselineBody);
+      const jsonB = JSON.parse(payloadBody);
+      const diff = deepJsonDiff(jsonA, jsonB);
+      structuralSimilarity = diff.similarity;
+      jsonChanges = diff;
+      if (structuralSimilarity < 0.95) {
+        differences.push(`JSON structural similarity ${(structuralSimilarity * 100).toFixed(1)}%`);
+      }
+    } catch {
+      structuralSimilarity = calculateStructuralSimilarity(baselineBody, payloadBody);
+    }
+
+    const diffType: ResponseDiff['diffType'] = this.resolveDiffType(differences);
+    const similarity = Math.max(0, Math.min(1, (contentSimilarity + structuralSimilarity) / 2));
+    const encodingDetected = detectEncoding(payloadBody, withPayload.payload || '');
 
     return {
-      hasDiff: differences.length > 0,
+      hasDiff: differences.length > 0 || similarity < 0.95,
       diffType,
-      similarity: Math.max(0, similarity),
+      similarity,
       differences,
+      structuralSimilarity,
+      contentSimilarity,
+      jsonChanges,
+      encodingDetected,
     };
   }
 
@@ -246,8 +277,71 @@ export abstract class BaseVerifier implements IVulnerabilityVerifier {
    * Check for error patterns in response
    */
   protected hasErrorPatterns(response: string, patterns: string[]): boolean {
-    const lowerResponse = response.toLowerCase();
-    return patterns.some(pattern => lowerResponse.includes(pattern.toLowerCase()));
+    return this.matchErrorPatternsWithContext(response, patterns).matched;
+  }
+
+  /**
+   * Match error patterns and return structured context for better evidence.
+   */
+  protected matchErrorPatternsWithContext(
+    response: string,
+    patterns: (string | RegExp)[],
+    payload?: string
+  ): ErrorMatchResult {
+    const compiled = patterns.map((p) => (p instanceof RegExp ? p : new RegExp(p, 'i')));
+    const directMatch = matchErrorPatterns(response);
+    const matchedPatterns = new Set<string>(directMatch.patterns);
+    const snippets = [...directMatch.snippets];
+
+    for (const pattern of compiled) {
+      const regex = pattern.flags.includes('g') ? pattern : new RegExp(pattern, `${pattern.flags}g`);
+      let exec: RegExpExecArray | null;
+      while ((exec = regex.exec(response))) {
+        matchedPatterns.add(pattern.source);
+        const start = Math.max(0, exec.index - 50);
+        const end = Math.min(response.length, exec.index + (exec[0]?.length || 0) + 50);
+        snippets.push(response.slice(start, end));
+        if (!regex.global) break;
+      }
+    }
+
+    const matched = matchedPatterns.size > 0;
+    const category = matched ? (directMatch.category || this.inferCategoryFromPatterns(compiled)) : '';
+    const confidence = Math.min(1, 0.4 + matchedPatterns.size * 0.1 + (payload && this.isErrorRelatedToPayload(response, payload) ? 0.1 : 0));
+
+    return {
+      matched,
+      patterns: Array.from(matchedPatterns),
+      category,
+      snippets: snippets.slice(0, 5),
+      confidence,
+    };
+  }
+
+  /**
+   * Determine if an error message likely relates to the injected payload.
+   */
+  protected isErrorRelatedToPayload(response: string, payload?: string): boolean {
+    if (!payload) return false;
+    const idx = response.indexOf(payload);
+    if (idx === -1) return false;
+    const context = response.slice(Math.max(0, idx - 200), Math.min(response.length, idx + payload.length + 200)).toLowerCase();
+    return !/internal server error|stack trace/i.test(context);
+  }
+
+  private resolveDiffType(differences: string[]): ResponseDiff['diffType'] {
+    if (differences.some((d) => d.startsWith('Status'))) return 'status';
+    if (differences.some((d) => d.startsWith('Timing'))) return 'timing';
+    return 'content';
+  }
+
+  private inferCategoryFromPatterns(patterns: RegExp[]): string {
+    if (patterns.some((p) => SQL_ERROR_PATTERNS.includes(p))) return 'SQL Error';
+    if (patterns.some((p) => COMMAND_INJECTION_ERROR_PATTERNS.includes(p))) return 'Command Injection';
+    if (patterns.some((p) => STACK_TRACE_PATTERNS.includes(p))) return 'Stack Trace';
+    if (patterns.some((p) => PATH_DISCLOSURE_PATTERNS.includes(p))) return 'Path Disclosure';
+    if (patterns.some((p) => APPLICATION_ERROR_PATTERNS.includes(p))) return 'Application Error';
+    return '';
   }
 }
 
@@ -255,6 +349,7 @@ export abstract class BaseVerifier implements IVulnerabilityVerifier {
  * Simple verifier that re-runs the original payload
  */
 export class ReplayVerifier extends BaseVerifier {
+  readonly id = 'replay';
   readonly name = 'Replay Verifier';
   readonly supportedTypes = ['sql', 'xss', 'injection', 'command'];
 

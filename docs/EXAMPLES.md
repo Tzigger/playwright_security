@@ -1,6 +1,6 @@
-# Practical Examples
+# Kinetic Practical Examples
 
-> Real-world examples for using Playwright Security Framework
+> Real-world examples for using Kinetic Security Scanner
 
 ## Table of Contents
 
@@ -178,7 +178,7 @@ test.describe('Application Security Tests', () => {
 ```typescript
 // tests/multi-page-security.spec.ts
 import { test, expect } from '@playwright/test';
-import { runSecurityScan, VulnerabilitySeverity } from '@tzigger/playwright-security/testing';
+import { runSecurityScan, VulnerabilitySeverity } from '@tzigger/kinetic/testing';
 
 test.describe('Multi-Page Security Scan', () => {
   const pages = [
@@ -226,7 +226,7 @@ test.describe('Multi-Page Security Scan', () => {
 ```typescript
 // tests/api-security.spec.ts
 import { test, expect } from '@playwright/test';
-import { runSecurityScan } from '@tzigger/playwright-security/testing';
+import { runSecurityScan } from '@tzigger/kinetic/testing';
 
 test.describe('API Security Tests', () => {
   const apiBase = 'https://api.myapp.com/v1';
@@ -334,7 +334,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: security-reports/scan.sarif
-          category: dast-scan
+          category: kinetic
       
       - name: Comment PR with results
         if: github.event_name == 'pull_request'
@@ -444,7 +444,7 @@ import {
   Vulnerability, 
   VulnerabilityCategory, 
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 export class ApiKeyDetector extends BaseDetector {
   readonly id = 'api-key-leakage';
@@ -569,7 +569,7 @@ export class ApiKeyDetector extends BaseDetector {
 **Usage**:
 
 ```typescript
-import { ActiveScanner } from '@tzigger/playwright-security';
+import { ActiveScanner } from '@tzigger/kinetic';
 import { ApiKeyDetector } from './detectors/ApiKeyDetector';
 
 const scanner = new ActiveScanner();
@@ -588,7 +588,7 @@ import {
   Vulnerability, 
   VulnerabilityCategory, 
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 export class CorsDetector extends BaseDetector {
   readonly id = 'cors-misconfiguration';
@@ -680,8 +680,8 @@ export class CorsDetector extends BaseDetector {
 ```typescript
 // tests/authenticated-security.spec.ts
 import { test } from '@playwright/test';
-import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/playwright-security';
-import { ScanConfiguration, AuthType } from '@tzigger/playwright-security/types';
+import { ScanEngine, ActiveScanner, SqlInjectionDetector } from '@tzigger/kinetic';
+import { ScanConfiguration, AuthType } from '@tzigger/kinetic/types';
 
 test('authenticated pages security scan', async ({ page }) => {
   const engine = new ScanEngine();
@@ -726,7 +726,7 @@ test('authenticated pages security scan', async ({ page }) => {
 ### Example 10: Token-Based Authentication
 
 ```typescript
-import { ScanConfiguration, AuthType } from '@tzigger/playwright-security/types';
+import { ScanConfiguration, AuthType } from '@tzigger/kinetic/types';
 
 const config: ScanConfiguration = {
   target: {
@@ -754,7 +754,7 @@ const config: ScanConfiguration = {
 
 ```typescript
 // config/security-config.ts
-import { ScanConfiguration, AggressivenessLevel } from '@tzigger/playwright-security/types';
+import { ScanConfiguration, AggressivenessLevel } from '@tzigger/kinetic/types';
 
 export function getSecurityConfig(environment: 'dev' | 'staging' | 'prod'): ScanConfiguration {
   const baseConfig: ScanConfiguration = {
@@ -807,7 +807,7 @@ import {
   JsonReporter,
   HtmlReporter,
   SarifReporter
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 import * as fs from 'fs/promises';
 
 test('comprehensive security scan with all features', async () => {

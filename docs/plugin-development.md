@@ -1,10 +1,8 @@
-# Plugin Development Guide
-
-# Plugin Development Guide
+# Kinetic Plugin Development Guide
 
 ## Overview
 
-The DAST Engine supports custom plugins for extending functionality. You can create:
+Kinetic supports custom plugins for extending functionality. You can create:
 
 - **Custom active detectors** (currently supported)
 - **Custom passive detectors** (interface ready, partial implementation)
@@ -737,13 +735,13 @@ my-custom-detectors/
 
 ```json
 {
-  "name": "@yourorg/playwright-security-custom-detector",
+  "name": "@yourorg/kinetic-custom-detector",
   "version": "1.0.0",
-  "description": "Custom detector for Playwright Security",
+  "description": "Custom detector for Kinetic",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "peerDependencies": {
-    "@tzigger/playwright-security": "^0.1.0",
+    "@tzigger/kinetic": "^0.1.0",
     "playwright": "^1.40.0"
   },
   "scripts": {
@@ -757,8 +755,8 @@ my-custom-detectors/
 
 - **Documentation**: [Main Docs](./README.md)
 - **Examples**: See `tests/` directory for working examples
-- **Issues**: [GitHub Issues](https://github.com/Tzigger/playwright-security/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Tzigger/playwright-security/discussions)
+- **Issues**: [GitHub Issues](https://github.com/tzigger/kinetic/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/tzigger/kinetic/discussions)
 
 ---
 

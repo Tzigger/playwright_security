@@ -41,10 +41,18 @@ test.describe('bWAPP PageScanner comprehensive', () => {
   test('covers OWASP-style pages for common vulns', async ({ page, context }) => {
     test.setTimeout(180000);
 
-    const logger = new Logger(LogLevel.INFO, 'BwappComprehensiveSpec');
+    const logger = new Logger(LogLevel.DEBUG, 'BwappComprehensiveSpec');
     const findings: Vulnerability[] = [];
 
-    const scanner = new PageScanner(bwappConfig);
+    const scanner = new PageScanner(bwappConfig, LogLevel.DEBUG);
+    
+    // Create detectors with DEBUG level
+    const sqliDetector = new SqlInjectionDetector();
+    const xssDetector = new XssDetector();
+    const injectionDetector = new InjectionDetector(LogLevel.DEBUG);
+    
+    logger.info(`Registering detectors: ${sqliDetector.name}, ${xssDetector.name}, ${injectionDetector.name}`);
+    scanner.registerDetectors([sqliDetector, xssDetector, injectionDetector]);
 
     const scanContext = {
       page,
@@ -58,7 +66,7 @@ test.describe('bWAPP PageScanner comprehensive', () => {
         detectors: { enabled: ['sqli', 'xss', 'injection'], sensitivity: SensitivityLevel.NORMAL },
         browser: { type: 'chromium' as const, headless: true },
         reporting: { formats: [ReportFormat.CONSOLE], outputDir: 'reports', verbosity: VerbosityLevel.NORMAL },
-        advanced: { logLevel: LogLevel.INFO },
+        advanced: { logLevel: LogLevel.DEBUG },
       },
       logger: logger.child('Scanner'),
       emitVulnerability: (vuln: unknown) => {
@@ -72,8 +80,50 @@ test.describe('bWAPP PageScanner comprehensive', () => {
     const result = await scanner.execute();
     await scanner.cleanup();
 
-    // Smoke assertion: execution completes (detectors not registered here for speed)
-    expect(result.summary.total).toBe(0);
-    expect(findings.length).toBe(0);
+    // Basic assertion: some vulnerabilities found
+    expect(result.summary.total).toBeGreaterThan(0);
+    expect(findings.length).toBeGreaterThan(0);
+
+    // Page-specific assertions to ensure detectors are working on target pages
+    const allVulns = [...result.vulnerabilities, ...findings];
+
+    // SQL Injection check for /sqli_1.php
+    const sqliPageVulns = allVulns.filter(v => 
+      v.url?.includes('sqli_1.php') || v.evidence?.request?.url?.includes('sqli_1.php')
+    );
+    const sqliCweVulns = sqliPageVulns.filter(v => v.cwe === 'CWE-89');
+    expect(sqliCweVulns.length).toBeGreaterThan(0);
+    expect(sqliCweVulns.some(v => v.evidence && (v.evidence.request || v.evidence.response))).toBe(true);
+
+    // XSS check for /xss_get.php
+    const xssGetPageVulns = allVulns.filter(v => 
+      v.url?.includes('xss_get.php') || v.evidence?.request?.url?.includes('xss_get.php')
+    );
+    const xssGetCweVulns = xssGetPageVulns.filter(v => v.cwe === 'CWE-79');
+    expect(xssGetCweVulns.length).toBeGreaterThan(0);
+    expect(xssGetCweVulns.some(v => 
+      v.evidence?.response?.body?.toString().toLowerCase().includes('script') ||
+      v.evidence?.requestBody?.toLowerCase().includes('script')
+    )).toBe(true);
+
+    // XSS check for /xss_post.php
+    const xssPostPageVulns = allVulns.filter(v => 
+      v.url?.includes('xss_post.php') || v.evidence?.request?.url?.includes('xss_post.php')
+    );
+    const xssPostCweVulns = xssPostPageVulns.filter(v => v.cwe === 'CWE-79');
+    expect(xssPostCweVulns.length).toBeGreaterThan(0);
+    expect(xssPostCweVulns.some(v => 
+      v.evidence?.response?.body?.toString().toLowerCase().includes('script') ||
+      v.evidence?.requestBody?.toLowerCase().includes('script')
+    )).toBe(true);
+
+    // Command Injection check for /commandi.php
+    const commandiPageVulns = allVulns.filter(v => 
+      v.url?.includes('commandi.php') || v.evidence?.request?.url?.includes('commandi.php')
+    );
+    const commandiCweVulns = commandiPageVulns.filter(v => 
+      v.cwe === 'CWE-77' || v.cwe === 'CWE-78'
+    );
+    expect(commandiCweVulns.length).toBeGreaterThan(0);
   });
 });

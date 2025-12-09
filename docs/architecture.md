@@ -1,8 +1,8 @@
-# DAST Engine Architecture
+# Kinetic Engine Architecture
 
 ## System Overview
 
-The DAST (Dynamic Application Security Testing) Engine is built on a modular, layered architecture that enables extensibility, maintainability, and scalability. It leverages Playwright for browser automation and implements multiple detection techniques for OWASP Top 10 vulnerabilities.
+The Kinetic Security Scanner is built on a modular, layered architecture that enables extensibility, maintainability, and scalability. It leverages Playwright for browser automation and implements multiple detection techniques for OWASP Top 10 vulnerabilities.
 
 ## Architectural Layers
 

@@ -3,6 +3,12 @@
  *
  * Scans a set of bWAPP vulnerability pages (OWASP Top 10 style) using the PageScanner
  * with built-in bWAPP authentication (bee/bug) and preset page targets.
+ * 
+ * This example includes a comprehensive set of detectors covering:
+ * - A03:2021 Injection: SQLi, XSS, Command Injection
+ * - A01:2021 Broken Access Control: Path Traversal, IDOR/BOLA
+ * - A10:2021 SSRF: Server-Side Request Forgery
+ * - A05:2021 Security Misconfiguration: Error Disclosure
  *
  * Usage:
  *   BWAPP_URL=http://localhost:8080 npx tsx ./examples/bwapp-comprehensive-scan.ts
@@ -10,9 +16,17 @@
 
 import { chromium, Browser } from 'playwright';
 import { PageScanner } from '../src/scanners/active/PageScanner';
+// A03:2021 Injection Detectors
 import { SqlInjectionDetector } from '../src/detectors/active/SqlInjectionDetector';
 import { XssDetector } from '../src/detectors/active/XssDetector';
 import { InjectionDetector } from '../src/detectors/active/InjectionDetector';
+// A01:2021 Broken Access Control Detectors
+import { PathTraversalDetector } from '../src/detectors/active/PathTraversalDetector';
+import { BolaDetector } from '../src/detectors/active/BolaDetector';
+// A10:2021 SSRF Detector
+import { SsrfDetector } from '../src/detectors/active/SsrfDetector';
+// A05:2021 Security Misconfiguration Detector
+import { ErrorBasedDetector } from '../src/detectors/active/ErrorBasedDetector';
 import { PageScanConfig, PageTarget } from '../src/types/page-scan';
 import { Vulnerability } from '../src/types/vulnerability';
 import { Logger } from '../src/utils/logger/Logger';
@@ -68,10 +82,23 @@ async function runBwappComprehensiveScan(): Promise<void> {
     const page = await context.newPage();
 
     const scanner = new PageScanner(bwappConfig);
+    
+    // Register comprehensive detector set organized by OWASP category
     scanner.registerDetectors([
+      // A03:2021 Injection - SQL, XSS, Command Injection
       new SqlInjectionDetector(),
       new XssDetector(),
       new InjectionDetector(),
+      
+      // A01:2021 Broken Access Control - Path Traversal, IDOR/BOLA
+      new PathTraversalDetector(),
+      new BolaDetector(),
+      
+      // A10:2021 Server-Side Request Forgery
+      new SsrfDetector(),
+      
+      // A05:2021 Security Misconfiguration - Error Disclosure
+      new ErrorBasedDetector(),
     ]);
 
     const scanContext = {
@@ -84,7 +111,7 @@ async function runBwappComprehensiveScan(): Promise<void> {
           active: { enabled: true, aggressiveness: AggressivenessLevel.MEDIUM },
         },
         detectors: {
-          enabled: ['sqli', 'xss', 'injection'],
+          enabled: ['sqli', 'xss', 'injection', 'path-traversal', 'bola', 'ssrf', 'error-based'],
           sensitivity: SensitivityLevel.NORMAL,
         },
         browser: { type: 'chromium' as const, headless: true },

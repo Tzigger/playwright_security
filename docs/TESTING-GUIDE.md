@@ -1,8 +1,8 @@
-# Testing Guide
+# Kinetic Testing Guide
 
 ## Overview
 
-This guide explains how to write security tests using the Playwright Security framework. We provide simple helper functions and interfaces that make security testing as easy as writing regular Playwright tests.
+This guide explains how to write security tests using Kinetic. We provide simple helper functions and interfaces that make security testing as easy as writing regular Playwright tests.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ This guide explains how to write security tests using the Playwright Security fr
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { runActiveSecurityScan } from '@tzigger/playwright-security';
+import { runActiveSecurityScan } from '@tzigger/kinetic';
 
 test('basic security scan', async ({ page }) => {
   await page.goto('https://example.com');
@@ -576,7 +576,7 @@ jobs:
 
 ```typescript
 import { chromium } from 'playwright';
-import { runActiveSecurityScan } from '@tzigger/playwright-security';
+import { runActiveSecurityScan } from '@tzigger/kinetic';
 
 describe('Security Tests', () => {
   let browser;
@@ -671,5 +671,5 @@ critical.forEach(v => {
 ## Support
 
 - 📖 Documentation: [docs/](./README.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/Tzigger/playwright-security/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/Tzigger/playwright-security/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/tzigger/kinetic/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/tzigger/kinetic/discussions)

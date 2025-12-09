@@ -1,6 +1,6 @@
-# Developer Guide: Using Playwright Security Framework
+# Kinetic Developer Guide
 
-> Complete guide for integrating Playwright Security Framework into your projects
+> Complete guide for integrating Kinetic Security Scanner into your projects
 
 ## Table of Contents
 
@@ -22,13 +22,13 @@
 ### Install from NPM
 
 ```bash
-npm install @tzigger/playwright-security --save-dev
+npm install @tzigger/kinetic --save-dev
 ```
 
 ### Install from GitHub
 
 ```bash
-npm install github:Tzigger/playwright_security --save-dev
+npm install github:tzigger/kinetic --save-dev
 ```
 
 ### Peer Dependencies
@@ -48,8 +48,8 @@ npm install playwright @playwright/test --save-dev
 ### 1. Basic Security Scan
 
 ```typescript
-import { ScanEngine, ActiveScanner, SqlInjectionDetector, XssDetector } from '@tzigger/playwright-security';
-import { ScanConfiguration, VulnerabilitySeverity } from '@tzigger/playwright-security/types';
+import { ScanEngine, ActiveScanner, SqlInjectionDetector, XssDetector } from '@tzigger/kinetic';
+import { ScanConfiguration, VulnerabilitySeverity } from '@tzigger/kinetic/types';
 
 async function scanWebsite(url: string) {
   // Create scan engine
@@ -97,7 +97,7 @@ import {
   runPassiveSecurityScan,
   assertNoVulnerabilities, 
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 test.describe('Security Tests', () => {
   test('login form should be secure - active scan', async ({ page }) => {
@@ -220,7 +220,7 @@ class ScanEngine {
 #### Usage Example
 
 ```typescript
-import { ScanEngine } from '@tzigger/playwright-security';
+import { ScanEngine } from '@tzigger/kinetic';
 
 const engine = new ScanEngine();
 
@@ -257,7 +257,7 @@ class ActiveScanner implements IScanner {
 #### Usage Example
 
 ```typescript
-import { ActiveScanner, SqlInjectionDetector, XssDetector } from '@tzigger/playwright-security';
+import { ActiveScanner, SqlInjectionDetector, XssDetector } from '@tzigger/kinetic';
 
 const scanner = new ActiveScanner();
 scanner.registerDetectors([
@@ -296,7 +296,7 @@ import {
   HeaderSecurityDetector,
   CookieSecurityDetector,
   InsecureTransmissionDetector
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 const scanner = new PassiveScanner();
 scanner.registerDetectors([
@@ -455,7 +455,7 @@ class InsecureTransmissionDetector extends BaseDetector {
 Generates machine-readable JSON reports.
 
 ```typescript
-import { JsonReporter } from '@tzigger/playwright-security';
+import { JsonReporter } from '@tzigger/kinetic';
 
 const reporter = new JsonReporter();
 engine.registerReporter(reporter);
@@ -466,7 +466,7 @@ engine.registerReporter(reporter);
 Generates human-friendly HTML reports.
 
 ```typescript
-import { HtmlReporter } from '@tzigger/playwright-security';
+import { HtmlReporter } from '@tzigger/kinetic';
 
 const reporter = new HtmlReporter();
 engine.registerReporter(reporter);
@@ -477,7 +477,7 @@ engine.registerReporter(reporter);
 Generates SARIF format for CI/CD integration.
 
 ```typescript
-import { SarifReporter } from '@tzigger/playwright-security';
+import { SarifReporter } from '@tzigger/kinetic';
 
 const reporter = new SarifReporter();
 engine.registerReporter(reporter);
@@ -512,7 +512,7 @@ interface ActiveScanOptions {
 **Example**:
 
 ```typescript
-import { runActiveSecurityScan } from '@tzigger/playwright-security/testing';
+import { runActiveSecurityScan } from '@tzigger/kinetic/testing';
 
 test('API endpoint security - active', async () => {
   const vulns = await runActiveSecurityScan('https://api.myapp.com/v1/users', {
@@ -547,7 +547,7 @@ interface PassiveScanOptions {
 **Example**:
 
 ```typescript
-import { runPassiveSecurityScan } from '@tzigger/playwright-security/testing';
+import { runPassiveSecurityScan } from '@tzigger/kinetic/testing';
 
 test('security headers check - passive', async () => {
   const vulns = await runPassiveSecurityScan('https://myapp.com', {
@@ -575,7 +575,7 @@ function assertNoVulnerabilities(
 **Example**:
 
 ```typescript
-import { assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/playwright-security/testing';
+import { assertNoVulnerabilities, VulnerabilitySeverity } from '@tzigger/kinetic/testing';
 
 test('no critical vulnerabilities', async ({ page }) => {
   const vulns = await runSecurityScan(page.url());
@@ -595,7 +595,7 @@ import {
   runActiveSecurityScan, 
   runPassiveSecurityScan,
   assertNoVulnerabilities 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 test.describe('Page Security', () => {
   const pages = [
@@ -637,7 +637,7 @@ import {
   runActiveSecurityScan, 
   runPassiveSecurityScan,
   VulnerabilitySeverity 
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 import * as fs from 'fs/promises';
 
 test('comprehensive security scan', async () => {
@@ -719,7 +719,7 @@ Create custom detectors to find application-specific vulnerabilities.
 ### Step 1: Extend BaseDetector
 
 ```typescript
-import { BaseDetector, Vulnerability, VulnerabilityCategory, VulnerabilitySeverity } from '@tzigger/playwright-security';
+import { BaseDetector, Vulnerability, VulnerabilityCategory, VulnerabilitySeverity } from '@tzigger/kinetic';
 
 export class CustomApiKeyDetector extends BaseDetector {
   readonly id = 'custom-api-key-leak';
@@ -795,7 +795,7 @@ export class CustomApiKeyDetector extends BaseDetector {
 ### Step 2: Register Custom Detector
 
 ```typescript
-import { ActiveScanner } from '@tzigger/playwright-security';
+import { ActiveScanner } from '@tzigger/kinetic';
 import { CustomApiKeyDetector } from './custom-detectors/CustomApiKeyDetector';
 
 const scanner = new ActiveScanner();
@@ -832,7 +832,7 @@ Create custom report formats for your specific needs.
 ### Step 1: Extend BaseReporter
 
 ```typescript
-import { BaseReporter, AggregatedScanResult, ReportFormat } from '@tzigger/playwright-security';
+import { BaseReporter, AggregatedScanResult, ReportFormat } from '@tzigger/kinetic';
 import * as fs from 'fs/promises';
 
 export class MarkdownReporter extends BaseReporter {
@@ -882,7 +882,7 @@ export class MarkdownReporter extends BaseReporter {
 ### Step 2: Register Custom Reporter
 
 ```typescript
-import { ScanEngine } from '@tzigger/playwright-security';
+import { ScanEngine } from '@tzigger/kinetic';
 import { MarkdownReporter } from './custom-reporters/MarkdownReporter';
 
 const engine = new ScanEngine();
@@ -896,7 +896,7 @@ engine.registerReporter(new MarkdownReporter());
 ### Configuration Builder Pattern
 
 ```typescript
-import { ScanConfiguration, AggressivenessLevel, VulnerabilitySeverity } from '@tzigger/playwright-security/types';
+import { ScanConfiguration, AggressivenessLevel, VulnerabilitySeverity } from '@tzigger/kinetic/types';
 
 function createSecurityConfig(targetUrl: string): ScanConfiguration {
   return {
@@ -956,7 +956,7 @@ function createSecurityConfig(targetUrl: string): ScanConfiguration {
 ### Event-Driven Architecture
 
 ```typescript
-import { ScanEngine } from '@tzigger/playwright-security';
+import { ScanEngine } from '@tzigger/kinetic';
 
 const engine = new ScanEngine();
 
@@ -1130,7 +1130,7 @@ import {
   ErrorBasedDetector,
   JsonReporter,
   HtmlReporter 
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 
 test.describe('E2E Security Testing', () => {
   let engine: ScanEngine;
@@ -1198,7 +1198,7 @@ import {
   runPassiveSecurityScan,
   assertNoVulnerabilities,
   VulnerabilitySeverity
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 
 test.describe('API Security', () => {
   const baseUrl = 'https://api.myapp.com/v1';
@@ -1295,7 +1295,7 @@ import type {
   IDetector,
   IReporter,
   IScanner
-} from '@tzigger/playwright-security';
+} from '@tzigger/kinetic';
 ```
 
 ---
@@ -1322,13 +1322,13 @@ await engine.scan(); // Works
 
 ```typescript
 // ❌ Old API (deprecated)
-import { runSecurityScan } from '@tzigger/playwright-security/testing';
+import { runSecurityScan } from '@tzigger/kinetic/testing';
 
 // ✅ New API (use specific scan types)
 import { 
   runActiveSecurityScan,   // For injection testing
   runPassiveSecurityScan   // For traffic analysis
-} from '@tzigger/playwright-security/testing';
+} from '@tzigger/kinetic/testing';
 ```
 
 #### Issue: "Configuration not loaded"
@@ -1358,12 +1358,12 @@ browser: {
 
 ### Installation
 
-To use the `dast-scan` CLI command:
+To use the `kinetic` CLI command:
 
 ```bash
 # Clone and setup
-git clone https://github.com/Tzigger/playwright_security.git
-cd playwright_security
+git clone https://github.com/tzigger/kinetic.git
+cd kinetic
 npm install
 
 # Build the project
@@ -1379,19 +1379,19 @@ sudo npm link
 
 ```bash
 # Passive scan (fast, 3-5 seconds)
-dast-scan https://myapp.com --scan-type passive
+kinetic https://myapp.com --scan-type passive
 
 # Active scan (comprehensive, 30-120 seconds)
-dast-scan https://myapp.com --scan-type active
+kinetic https://myapp.com --scan-type active
 
 # Both passive and active
-dast-scan https://myapp.com --scan-type both
+kinetic https://myapp.com --scan-type both
 
 # With custom output
-dast-scan https://myapp.com --output ./reports --formats html,json,sarif
+kinetic https://myapp.com --output ./reports --formats html,json,sarif
 
 # Using a configuration file
-dast-scan --config ./config/default.config.json
+kinetic --config ./config/default.config.json
 ```
 
 ### Available Flags
@@ -1409,11 +1409,45 @@ See [MIGRATION-GUIDE.md](./MIGRATION-GUIDE.md) for more CLI details.
 
 ---
 
+## Verification Enhancements (v0.3)
+
+The verification layer now prioritizes confidence-driven confirmation with statistical rigor and multi-signal checks.
+
+- **Timing verification**: Adaptive sampling (5–10 samples), IQR outlier removal, Welch t-test with p-value scoring, 95% confidence intervals, and delay-window validation to reduce jitter-driven false positives.
+- **Response diffing**: Deep JSON structural diffing, Levenshtein-based content similarity, encoding detection, and regex-driven error categorization with context snippets.
+- **Multi-attempt verification**: Payload variations per technique (e.g., different quote/comment styles for SQLi, context-shifted XSS payloads) with weighted confidence aggregation and consistency penalties.
+- **Prioritized techniques**: Cost/reliability ordering (fast/error-based first, expensive/time-based last) with early exit when confidence ≥ 0.9.
+- **Resilience**: Technique-level timeouts, transient network retry (backoff), and graceful degradation to `INCONCLUSIVE` when only network/timeouts occur.
+
+### Configuring verification
+
+```typescript
+import { VerificationEngine, VerificationLevel } from '@tzigger/kinetic/core/verification';
+
+const engine = new VerificationEngine();
+const result = await engine.verify(vuln, page, {
+  level: VerificationLevel.STANDARD,
+  minConfidence: 0.7,
+  stopOnConfirm: true,
+  enableMultiAttempt: true,
+  maxPayloadVariations: 3,
+  techniqueOrder: ['response diff verifier', 'time-based verifier'],
+});
+```
+
+### Troubleshooting verification
+
+- **High variance timings**: Increase `maxPayloadVariations` or re-run with a more stable network; check log entries for CV and outlier counts.
+- **Encoded reflections**: Inspect `encodingDetected` in verification evidence; try alternate payload contexts (attribute/JS URL) if reflection is HTML/URL encoded.
+- **Network-heavy targets**: If all attempts show `network`/`timeout`, verification returns `INCONCLUSIVE`; rerun with higher `attemptTimeout` or reduced technique set.
+
+---
+
 ## Support
 
-- **Issues**: https://github.com/Tzigger/playwright_security/issues
-- **Discussions**: https://github.com/Tzigger/playwright_security/discussions
-- **Documentation**: https://github.com/Tzigger/playwright_security/docs
+- **Issues**: https://github.com/tzigger/kinetic/issues
+- **Discussions**: https://github.com/tzigger/kinetic/discussions
+- **Documentation**: https://github.com/tzigger/kinetic/docs
 
 ---
 

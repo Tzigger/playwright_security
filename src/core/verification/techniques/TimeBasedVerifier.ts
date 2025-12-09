@@ -14,6 +14,12 @@ import {
 import { BaseVerifier } from '../BaseVerifier';
 import { PayloadEncoding } from '../../../scanners/active/PayloadInjector';
 import { AttackSurface } from '../../../scanners/active/DomExplorer';
+import {
+  calculateConfidenceInterval,
+  determineOptimalSamples,
+  detectOutliers,
+  performTTest,
+} from '../../../utils/helpers/statistical-helpers';
 
 /**
  * Payloads for time-based verification
@@ -35,6 +41,7 @@ const TIME_BASED_PAYLOADS: Record<string, { payload: string; delay: number }[]> 
  * TimeBasedVerifier - Uses timing analysis to verify injection vulnerabilities
  */
 export class TimeBasedVerifier extends BaseVerifier {
+  readonly id = 'time-based';
   readonly name = 'Time-Based Verifier';
   readonly supportedTypes = ['sql', 'injection', 'command'];
 
@@ -49,7 +56,7 @@ export class TimeBasedVerifier extends BaseVerifier {
 
   async verify(
     vulnerability: Vulnerability,
-    _config: VerificationConfig
+    config: VerificationConfig
   ): Promise<VerificationResult> {
     if (!this.page) {
       return this.createResult(
@@ -75,13 +82,20 @@ export class TimeBasedVerifier extends BaseVerifier {
 
     // Determine payload type
     const payloadType = this.determinePayloadType(vulnerability);
-    const payloads = TIME_BASED_PAYLOADS[payloadType] ?? TIME_BASED_PAYLOADS['sql-injection']!;
+    const payloadVariation = config.payloadVariation;
+    const payloads = this.selectPayloads(payloadType, payloadVariation);
+    const attemptTimeout = config.attemptTimeout ?? 10000;
+    const maxPayloads = attemptTimeout < 8000 ? 1 : payloads.length;
+    const selectedPayloads = payloads.slice(0, Math.max(1, maxPayloads));
+    if (selectedPayloads.length < payloads.length) {
+      this.logger.debug(`Reducing time-based payloads due to timeout budget (${attemptTimeout}ms)`);
+    }
 
     // Run timing analysis for each payload
     const results: TimingAnalysis[] = [];
     let confirmedCount = 0;
 
-    for (const { payload, delay } of payloads) {
+    for (const { payload, delay } of selectedPayloads) {
       try {
         const analysis = await this.performTimingAnalysis(
           this.page,
@@ -89,7 +103,8 @@ export class TimeBasedVerifier extends BaseVerifier {
           payload,
           delay,
           vulnerability.url || '',
-          3 // 3 samples for statistical significance
+          3, // base samples for statistical significance
+          attemptTimeout
         );
 
         results.push(analysis);
@@ -146,6 +161,23 @@ export class TimeBasedVerifier extends BaseVerifier {
     return 'sql-injection';
   }
 
+      /**
+       * Select payloads based on variation hint to ensure multi-attempt runs use distinct values.
+       */
+      private selectPayloads(payloadType: string, variation?: string): { payload: string; delay: number }[] {
+        const base = TIME_BASED_PAYLOADS[payloadType] ?? TIME_BASED_PAYLOADS['sql-injection']!;
+        if (!variation) return base;
+
+        const key = variation.toLowerCase();
+        if (key === 'single-quote') return base.slice(0, 1);
+        if (key === 'double-quote') return base.length > 1 ? [base[1]!] : base.slice(0, 1);
+        if (key === 'comment') return base.length > 2 ? [base[2]!] : base.slice(-1);
+        if (key === 'time-delay') return base;
+        if (key === 'pipe') return base.filter((p) => p.payload.startsWith('|')) || base;
+        if (key === 'semicolon') return base.filter((p) => p.payload.startsWith(';')) || base;
+        return base;
+      }
+
   /**
    * Calculate confidence based on timing analysis results
    */
@@ -154,27 +186,24 @@ export class TimeBasedVerifier extends BaseVerifier {
     confirmedCount: number
   ): number {
     if (results.length === 0) return 0;
-
-    let confidence = 0;
-
-    // Base confidence from confirmed payloads
-    confidence += confirmedCount * 0.3;
-
-    // Additional confidence from statistical analysis
-    for (const result of results) {
-      if (result.isSignificant) {
-        // Higher confidence if delay is close to expected
-        const delayAccuracy = 1 - Math.abs(result.actualDelay - result.expectedDelay) / result.expectedDelay;
-        confidence += Math.max(0, delayAccuracy * 0.1);
+    const scores = results.map((result) => {
+      let score = Math.min(0.95, 1 - (result.pValue ?? 1));
+      const delayAccuracy = Math.abs(result.actualDelay - result.expectedDelay);
+      if (delayAccuracy <= Math.max(1000, result.expectedDelay * 0.2)) {
+        score += 0.05;
       }
-    }
+      if ((result.coefficientOfVariation ?? 0) > 0.5) {
+        score -= 0.2;
+      }
+      if (!result.isSignificant) {
+        score *= 0.5;
+      }
+      return Math.max(0, Math.min(1, score));
+    });
 
-    // Bonus for consistent results across multiple payloads
-    if (confirmedCount >= 2) {
-      confidence += 0.1;
-    }
-
-    return Math.min(1, confidence);
+    const maxScore = Math.max(...scores);
+    const bonus = confirmedCount >= 2 ? 0.05 : 0;
+    return Math.min(1, maxScore + bonus);
   }
 
   /**
@@ -186,68 +215,130 @@ export class TimeBasedVerifier extends BaseVerifier {
     payload: string,
     expectedDelay: number,
     baseUrl: string,
-    samples: number = 3
+    _samples: number = 3,
+    attemptTimeout: number = 10000
   ): Promise<TimingAnalysis> {
-    // Measure baseline with warmup
-    const baselineTimes: number[] = [];
-    
-    // Warmup request
-    await this.injector.inject(page, surface, surface.value || 'test', {
-      encoding: PayloadEncoding.NONE,
-      submit: true,
-      baseUrl,
-    });
-    await this.sleep(200);
-
-    // Baseline measurements
-    for (let i = 0; i < samples; i++) {
-      const start = Date.now();
-      await this.injector.inject(page, surface, surface.value || 'test', {
-        encoding: PayloadEncoding.NONE,
-        submit: true,
-        baseUrl,
-      });
-      baselineTimes.push(Date.now() - start);
-      await this.sleep(100);
+    const budget = Math.max(2000, attemptTimeout * 0.8);
+    const perRequestEstimate = Math.max(expectedDelay, 750);
+    const warmups = Math.max(1, Math.min(3, Math.floor(budget / (perRequestEstimate * 4))));
+    for (let i = 0; i < warmups; i++) {
+      await this.safeMeasure(page, surface, surface.value || 'test', baseUrl);
     }
 
-    // Calculate baseline statistics
-    const baseline = baselineTimes.reduce((a, b) => a + b, 0) / baselineTimes.length;
-    const variance = baselineTimes.reduce((sum, t) => sum + Math.pow(t - baseline, 2), 0) / baselineTimes.length;
-    const baselineStdDev = Math.sqrt(variance);
+    const targetSampleWindow = Math.max(_samples, Math.min(6, Math.floor(budget / Math.max(perRequestEstimate, 1000))));
+    if (targetSampleWindow < _samples + 2) {
+      this.logger.debug(`Reduced timing samples to ${targetSampleWindow} due to attempt timeout budget (${attemptTimeout}ms)`);
+    }
+    const baselineSamples = await this.collectSamples(page, surface, surface.value || 'test', baseUrl, targetSampleWindow, targetSampleWindow + 2);
+    const baselineClean = detectOutliers(baselineSamples);
+    const baselineMean = this.mean(baselineClean.cleaned);
+    const baselineStd = this.std(baselineClean.cleaned, baselineMean);
+    const cv = baselineMean === 0 ? 0 : baselineStd / baselineMean;
 
-    // Measure with payload
-    const payloadTimes: number[] = [];
-    for (let i = 0; i < samples; i++) {
-      const start = Date.now();
+    const targetSamples = Math.min(determineOptimalSamples(baselineClean.cleaned, targetSampleWindow + 2), targetSampleWindow + 2);
+    if (baselineClean.cleaned.length < targetSamples) {
+      const extra = await this.collectSamples(
+        page,
+        surface,
+        surface.value || 'test',
+        baseUrl,
+        targetSamples - baselineClean.cleaned.length,
+        targetSampleWindow + 4
+      );
+      baselineClean.cleaned.push(...extra);
+    }
+
+    const payloadSamples = await this.collectSamples(page, surface, payload, baseUrl, baselineClean.cleaned.length, baselineClean.cleaned.length + 5);
+    const payloadClean = detectOutliers(payloadSamples);
+
+    const withPayload = this.mean(payloadClean.cleaned);
+    const actualDelay = withPayload - baselineMean;
+
+    const tTest = performTTest(baselineClean.cleaned, payloadClean.cleaned);
+    const delayDiffs = payloadClean.cleaned.map((p) => p - baselineMean);
+    const confidenceInterval = calculateConfidenceInterval(delayDiffs, 0.95);
+
+    const delayWindow = {
+      lower: expectedDelay - 1000,
+      upper: expectedDelay + 1000,
+    };
+    const delayWithinRange = actualDelay >= delayWindow.lower && actualDelay <= delayWindow.upper;
+
+    const isSignificant =
+      payloadClean.cleaned.length >= 3 &&
+      baselineClean.cleaned.length >= 3 &&
+      tTest.isSignificant &&
+      delayWithinRange;
+
+    this.logger.debug(
+      `Timing stats -> baselineMean: ${baselineMean.toFixed(1)}ms, payloadMean: ${withPayload.toFixed(1)}ms, ` +
+      `actualDelay: ${actualDelay.toFixed(1)}ms, t: ${tTest.tStatistic.toFixed(3)}, p: ${tTest.pValue.toFixed(3)}, cv: ${cv.toFixed(2)}, outliers: ${[...baselineClean.outliers, ...payloadClean.outliers].length}`
+    );
+
+    return {
+      baseline: baselineMean,
+      withPayload,
+      expectedDelay,
+      actualDelay,
+      isSignificant,
+      sampleCount: payloadClean.cleaned.length,
+      baselineStdDev: baselineStd,
+      tStatistic: tTest.tStatistic,
+      pValue: tTest.pValue,
+      confidenceInterval,
+      outliersRemoved: [...baselineClean.outliers, ...payloadClean.outliers],
+      coefficientOfVariation: cv,
+    };
+  }
+
+  private async collectSamples(
+    page: Page,
+    surface: AttackSurface,
+    payload: string,
+    baseUrl: string,
+    desired: number,
+    maxAttempts: number
+  ): Promise<number[]> {
+    const samples: number[] = [];
+    let attempts = 0;
+    while (samples.length < desired && attempts < maxAttempts) {
+      attempts++;
+      const duration = await this.safeMeasure(page, surface, payload, baseUrl);
+      if (duration !== null) {
+        samples.push(duration);
+      }
+      await this.sleep(100);
+    }
+    return samples;
+  }
+
+  private async safeMeasure(
+    page: Page,
+    surface: AttackSurface,
+    payload: string,
+    baseUrl: string
+  ): Promise<number | null> {
+    const start = Date.now();
+    try {
       await this.injector.inject(page, surface, payload, {
         encoding: PayloadEncoding.NONE,
         submit: true,
         baseUrl,
       });
-      payloadTimes.push(Date.now() - start);
-      await this.sleep(100);
+      return Date.now() - start;
+    } catch (error) {
+      this.logger.debug(`Timing sample skipped due to error: ${error}`);
+      return null;
     }
+  }
 
-    const withPayload = payloadTimes.reduce((a, b) => a + b, 0) / payloadTimes.length;
-    const actualDelay = withPayload - baseline;
+  private mean(values: number[]): number {
+    return values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+  }
 
-    // Statistical significance test
-    // Delay must be at least (expectedDelay - 1 stdDev) and response must take at least expectedDelay
-    const minAcceptableDelay = expectedDelay - baselineStdDev;
-    const isDelayPresent = actualDelay >= minAcceptableDelay;
-    const isResponseSlow = withPayload >= (baseline + expectedDelay * 0.8);
-    
-    const isSignificant = isDelayPresent && isResponseSlow;
-
-    return {
-      baseline,
-      withPayload,
-      expectedDelay,
-      actualDelay,
-      isSignificant,
-      sampleCount: samples,
-      baselineStdDev,
-    };
+  private std(values: number[], mean: number): number {
+    if (values.length <= 1) return 0;
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (values.length - 1);
+    return Math.sqrt(variance);
   }
 }
