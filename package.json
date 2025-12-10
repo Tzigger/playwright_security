@@ -58,13 +58,13 @@
   ],
   "author": "Tzigger",
   "license": "MIT",
-  "homepage": "https://github.com/Tzigger/playwright_security#readme",
+  "homepage": "https://github.com/Tzigger/kinetic_dast#readme",
   "bugs": {
-    "url": "https://github.com/Tzigger/playwright_security/issues"
+    "url": "https://github.com/Tzigger/kinetic_dast/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tzigger/playwright_security.git"
+    "url": "git+https://github.com/Tzigger/kinetic_dast.git"
   },
   "engines": {
     "node": ">=18.0.0",
