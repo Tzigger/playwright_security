@@ -458,6 +458,7 @@ export class SqlInjectionDetector implements IActiveDetector {
     this.logger.info(`[SQLi] testErrorBased: got ${results.length} results, checking for SQL errors...`);
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
+      if (!result) continue;
       this.logger.info(`[SQLi] testErrorBased result ${i}: payload="${result.payload}", bodyLen=${result.response?.body?.length || 0}`);
       const errorInfo = this.hasSqlError(result);
       if (errorInfo.hasError) {
