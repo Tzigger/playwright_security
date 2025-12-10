@@ -7,7 +7,7 @@ import { ScanConfiguration } from '../types/config';
 import { ReportFormat } from '../types/enums';
 import { ScanResult } from '../types/scan-result';
 
-import { BaseReporter } from './base/IReporter';
+import { BaseReporter, ReporterInitOptions } from './base/IReporter';
 
 export class HtmlReporter extends BaseReporter {
   private template?: Handlebars.TemplateDelegate;
@@ -16,7 +16,7 @@ export class HtmlReporter extends BaseReporter {
     return ReportFormat.HTML;
   }
 
-  override async init(config: ScanConfiguration, options: unknown): Promise<void> {
+  override async init(config: ScanConfiguration, options: ReporterInitOptions): Promise<void> {
     await super.init(config, options);
     const tplPath = path.join(__dirname, 'templates', 'report.hbs');
     let source: string;

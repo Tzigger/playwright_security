@@ -140,8 +140,12 @@ export class ActiveScanner extends BaseScanner {
         
         if (needsNavigation) {
           try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+            const timeout = config.target.timeout || 30000;
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
+            await page.waitForLoadState('networkidle', { timeout: Math.min(timeout, 10000) }).catch(() => {});
+            
+            // SPA mitigation: If we just navigated, give it a bit more time if configured or implicit
+            await page.waitForTimeout(2000); 
           } catch (error) {
             context.logger.warn(`Failed to navigate to ${url}: ${error}`);
             page.off('request', requestListener);
@@ -170,7 +174,20 @@ export class ActiveScanner extends BaseScanner {
         }
 
         // Discover attack surfaces
-        const allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+        let allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+        
+        // Retry logic for slow SPAs
+        if (allSurfaces.length === 0) {
+            context.logger.info('No surfaces found initially, waiting for potential SPA hydration...');
+            await page.waitForTimeout(5000);
+            allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+            
+            if (allSurfaces.length === 0) {
+                 // Try one more time with a longer wait
+                 await page.waitForTimeout(5000);
+                 allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+            }
+        }
         
         // Filter surfaces for testing
         const attackSurfaces = allSurfaces.filter(s => 

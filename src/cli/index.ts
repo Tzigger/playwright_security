@@ -40,9 +40,39 @@ program
   .option('--parallel <n>', 'Parallel scanners', '2')
   .option('--passive', 'Enable passive scanning (network interception, headers, cookies)')
   .option('--active', 'Enable active scanning (payload injection, fuzzing)', true)
-  .option('--scan-type <type>', 'Scan type: active, passive, or both', 'active')
+  .option('--scan-type <type>', 'Scan type: active, passive, or both')
   .action(async (url: string | undefined, options: CliOptions) => {
     const configManager = ConfigurationManager.getInstance();
+    const rawArgs = process.argv.slice(2);
+    const passiveFlag = rawArgs.includes('--passive');
+    const activeFlag = rawArgs.includes('--active');
+    const noActiveFlag = rawArgs.includes('--no-active');
+    const scanTypeExplicit = rawArgs.some(arg => arg.startsWith('--scan-type'));
+    const scanTypeArg = options.scanType?.toLowerCase();
+
+    const resolvedScanType = (() => {
+      // Only use scanTypeArg if explicitly provided
+      if (scanTypeExplicit && (scanTypeArg === 'active' || scanTypeArg === 'passive' || scanTypeArg === 'both')) {
+        return scanTypeArg;
+      }
+
+      if (passiveFlag && activeFlag) {
+        return 'both';
+      }
+
+      if (passiveFlag) {
+        return 'passive';
+      }
+
+      if (noActiveFlag) {
+        return 'passive';
+      }
+
+      return 'active';
+    })();
+
+    const enablePassive = resolvedScanType === 'passive' || resolvedScanType === 'both';
+    const enableActive = resolvedScanType === 'active' || resolvedScanType === 'both';
     let config: ScanConfiguration;
 
     // Load from config file if provided
@@ -73,6 +103,14 @@ program
         overrides.advanced = { ...config.advanced, parallelism: parseInt(options.parallel, 10) || 2 };
       }
 
+      const wantsScannerOverride = !!(scanTypeExplicit || passiveFlag || activeFlag || noActiveFlag);
+      if (wantsScannerOverride) {
+        overrides.scanners = {
+          passive: { ...(config.scanners?.passive ?? {}), enabled: enablePassive },
+          active: { ...(config.scanners?.active ?? {}), enabled: enableActive },
+        };
+      }
+
       config = configManager.mergeConfig(overrides);
     } else {
       // ... build config manually as before, but ideally use ConfigurationManager for defaults/validation too
@@ -87,11 +125,6 @@ program
         .split(',')
         .map((s: string) => s.trim().toLowerCase())
         .map((s: string) => s as unknown as ReportFormat);
-
-      // Determine which scanners to enable based on flags
-      const scanType = options.scanType?.toLowerCase() || 'active';
-      const enablePassive = options.passive || scanType === 'passive' || scanType === 'both';
-      const enableActive = options.active !== false && (scanType === 'active' || scanType === 'both');
 
       config = {
         target: {
