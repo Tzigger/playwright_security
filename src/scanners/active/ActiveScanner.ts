@@ -5,6 +5,7 @@ import { ScanResult, ScanStatistics, VulnerabilitySummary } from '../../types/sc
 import { LogLevel, ScanStatus, VulnerabilitySeverity, ScannerType } from '../../types/enums';
 import { DomExplorer, AttackSurfaceType } from './DomExplorer';
 import { Request } from 'playwright';
+import { VerificationEngine } from '../../core/verification/VerificationEngine';
 
 /**
  * Configurare ActiveScanner
@@ -33,6 +34,7 @@ export class ActiveScanner extends BaseScanner {
   private config: ActiveScannerConfig;
   private detectors: Map<string, IActiveDetector> = new Map();
   private domExplorer: DomExplorer;
+  private verificationEngine: VerificationEngine;
   private visitedUrls: Set<string> = new Set();
   private crawlQueue: string[] = [];
 
@@ -50,6 +52,7 @@ export class ActiveScanner extends BaseScanner {
     };
 
     this.domExplorer = new DomExplorer(LogLevel.INFO);
+    this.verificationEngine = new VerificationEngine();
   }
 
   /**
@@ -80,6 +83,17 @@ export class ActiveScanner extends BaseScanner {
 
     // Validate detectors
     for (const [name, detector] of this.detectors) {
+      // Apply configuration if available
+      const tuning = context.config.detectors?.tuning;
+      if (tuning && name === 'SqlInjectionDetector' && tuning.sqli) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (detector as any).updateConfig === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (detector as any).updateConfig({ tuning: tuning.sqli });
+          context.logger.debug(`Applied tuning configuration to ${name}`);
+        }
+      }
+
       const isValid = await detector.validate();
       if (!isValid) {
         context.logger.warn(`Detector ${name} validation failed`);
@@ -283,9 +297,28 @@ export class ActiveScanner extends BaseScanner {
             const vulns = await detector.detect({ page, attackSurfaces: testableSurfaces, baseUrl: url });
             
             if (vulns.length > 0) {
-              context.logger.info(`Detector ${name} found ${vulns.length} vulnerabilities`);
-              allVulnerabilities.push(...vulns);
-              vulns.forEach(v => context.emitVulnerability?.(v));
+              context.logger.info(`Detector ${name} found ${vulns.length} potential vulnerabilities. Verifying...`);
+              
+              const verifiedVulns: Vulnerability[] = [];
+              for (const vuln of vulns) {
+                // Verify the vulnerability
+                const isVerified = await this.verificationEngine.verify(page, vuln);
+                if (isVerified) {
+                  // Mark as verified
+                  if (vuln.evidence?.metadata) {
+                    (vuln.evidence.metadata as any).verificationStatus = 'verified';
+                  }
+                  verifiedVulns.push(vuln);
+                } else {
+                  context.logger.info(`Discarding false positive: ${vuln.title} (${vuln.id})`);
+                }
+              }
+
+              if (verifiedVulns.length > 0) {
+                context.logger.info(`Verified ${verifiedVulns.length} vulnerabilities from ${name}`);
+                allVulnerabilities.push(...verifiedVulns);
+                verifiedVulns.forEach(v => context.emitVulnerability?.(v));
+              }
             }
           } catch (error) {
             context.logger.error(`Detector ${name} failed: ${error}`);

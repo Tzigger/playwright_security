@@ -241,6 +241,75 @@ examples/              # Example usage
 tests/                 # Test suites
 ```
 
+## 🛡️ Safety Features & Production Guardrails
+
+Kinetic includes comprehensive safety mechanisms to prevent accidental damage to production systems:
+
+### Safe Mode
+
+Safe mode automatically filters out destructive payloads during active scanning:
+
+```json
+{
+  "scanners": {
+    "active": {
+      "enabled": true,
+      "safeMode": true
+    }
+  }
+}
+```
+
+**What Safe Mode Protects Against:**
+- ✅ SQL destructive operations (DROP, DELETE, TRUNCATE)
+- ✅ System command execution (xp_cmdshell, etc.)
+- ✅ File operations (OUTFILE, LOAD_FILE)
+- ✅ Privilege escalation (GRANT, REVOKE)
+
+**Safe Mode Allows:**
+- ✅ SQL injection detection (OR, UNION, etc.)
+- ✅ Time-based blind SQLi testing
+- ✅ XSS payload injection
+- ✅ Path traversal testing
+
+### Production Guardrails
+
+Kinetic automatically:
+
+1. **Validates target URLs** - Detects if scanning production
+2. **Auto-enables safe mode** - For non-local targets
+3. **Issues warnings** - When active scanning on production
+4. **Logs all operations** - For audit trails
+
+```typescript
+// Scanning production automatically enables safe mode
+const engine = new ScanEngine();
+await engine.loadConfiguration({
+  target: { url: 'https://production.myapp.com' },
+  scanners: { 
+    active: { enabled: true, safeMode: false } // Will be overridden!
+  }
+});
+// Safe mode is AUTOMATICALLY ENABLED for non-local targets
+```
+
+### Target Validation
+
+```typescript
+import { TargetValidator } from '@tzigger/kinetic';
+
+const validator = new TargetValidator();
+const result = validator.validateUrl('https://production.example.com');
+
+console.log(result.isProduction); // true
+console.log(result.isLocal);      // false
+console.log(result.warnings);     // ['Target is production (not local)']
+```
+
+**📖 Full documentation:** See [Safe Mode & Production Guardrails](./docs/SAFE-MODE.md)
+
+---
+
 ## 🔧 Configuration
 
 ### Configuration File

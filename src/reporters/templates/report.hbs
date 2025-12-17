@@ -9,9 +9,14 @@
       .critical{background:#991b1b}.high{background:#dc2626}.medium{background:#d97706}
       .low{background:#2563eb}.info{background:#64748b}
       table{border-collapse:collapse;width:100%}
-      td,th{border:1px solid #e2e8f0;padding:8px}
+      td,th{border:1px solid #e2e8f0;padding:8px;vertical-align:top}
       th{background:#f1f5f9;text-align:left}
       small{color:#64748b}
+      details summary{cursor:pointer;color:#0f172a;font-weight:600}
+      .details-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-top:6px;font-size:13px}
+      .kv{margin:4px 0}
+      .mono{font-family:SFMono-Regular,Menlo,Consolas,monospace}
+      .block{background:#0f172a0d;padding:6px;border-radius:4px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word}
     </style>
   </head>
   <body>
@@ -34,6 +39,7 @@
           <th>Category</th>
           <th>Confidence</th>
           <th>URL</th>
+          <th>Details</th>
         </tr>
       </thead>
       <tbody>
@@ -43,7 +49,57 @@
             <td>{{title}}<br/><small>{{description}}</small></td>
             <td>{{category}}</td>
             <td>{{confidence}}</td>
-            <td>{{location.url}}</td>
+            <td>{{#if url}}{{url}}{{else}}{{location.url}}{{/if}}</td>
+            <td>
+              <details>
+                <summary>View</summary>
+                <div class="details-box">
+                  {{#if timestamp}}
+                    <div class="kv"><b>Detected:</b> {{timestamp}}</div>
+                  {{/if}}
+                  {{#if evidence.source}}
+                    <div class="kv"><b>Source:</b> {{evidence.source}}</div>
+                  {{/if}}
+                  {{#if evidence.request.method}}
+                    <div class="kv"><b>Method:</b> {{evidence.request.method}}</div>
+                  {{/if}}
+                  <div class="kv"><b>Surface:</b>
+                    {{#if evidence.metadata.surfaceName}}{{evidence.metadata.surfaceName}}{{else}}n/a{{/if}}
+                    {{#if evidence.metadata.contextInfo.surfaceType}} ({{evidence.metadata.contextInfo.surfaceType}}){{/if}}
+                  </div>
+                  {{#if evidence.metadata.payload}}
+                    <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.metadata.payload}}</span></div>
+                  {{else}}
+                    {{#if evidence.request.body}}
+                      <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.request.body}}</span></div>
+                    {{else}}
+                      {{#if evidence.element.payload}}
+                        <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.element.payload}}</span></div>
+                      {{/if}}
+                    {{/if}}
+                  {{/if}}
+                  {{#if evidence.metadata.contextInfo.injectionContext}}
+                    <div class="kv"><b>Context:</b> {{evidence.metadata.contextInfo.injectionContext}}</div>
+                  {{/if}}
+                  {{#if evidence.request.url}}
+                    <div class="kv"><b>Request URL:</b> {{evidence.request.url}}</div>
+                  {{/if}}
+                  {{#if evidence.request.body}}
+                    <div class="kv"><b>Request Body:</b></div>
+                    <pre class="block">{{evidence.request.body}}</pre>
+                  {{/if}}
+                  {{#if evidence.response.snippet}}
+                    <div class="kv"><b>Response Snippet:</b></div>
+                    <pre class="block">{{evidence.response.snippet}}</pre>
+                  {{else}}
+                    {{#if evidence.response.body}}
+                      <div class="kv"><b>Response Body:</b></div>
+                      <pre class="block">{{evidence.response.body}}</pre>
+                    {{/if}}
+                  {{/if}}
+                </div>
+              </details>
+            </td>
           </tr>
         {{/each}}
       </tbody>

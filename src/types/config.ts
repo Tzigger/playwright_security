@@ -193,6 +193,9 @@ export interface ActiveScannerConfig {
 
   /** Elements to avoid (CSS selectors) */
   excludeSelectors?: string[];
+
+  /** Safe mode: disable destructive payloads that could damage the target */
+  safeMode?: boolean;
 }
 
 /**
@@ -242,6 +245,20 @@ export interface DetectorConfig {
 
   /** Minimum confidence to report (0-1) */
   minConfidence?: number;
+
+  /** Tuning options for specific detectors */
+  tuning?: {
+    sqli?: {
+      booleanBased?: {
+        minRowCountDiff?: number;
+        baselineSamples?: number;
+      };
+    };
+    sensitiveData?: {
+      emailAllowlist?: string[];
+      skipPaths?: string[];
+    };
+  };
 }
 
 /**

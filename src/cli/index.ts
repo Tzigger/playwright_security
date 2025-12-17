@@ -24,6 +24,7 @@ interface CliOptions {
   passive?: boolean;
   active?: boolean;
   scanType?: string;
+  safemodeDisable?: boolean;
 }
 
 const program = new Command();
@@ -41,6 +42,7 @@ program
   .option('--passive', 'Enable passive scanning (network interception, headers, cookies)')
   .option('--active', 'Enable active scanning (payload injection, fuzzing)', true)
   .option('--scan-type <type>', 'Scan type: active, passive, or both')
+  .option('--safemode-disable', 'Disable safe mode protections (DANGEROUS)')
   .action(async (url: string | undefined, options: CliOptions) => {
     const configManager = ConfigurationManager.getInstance();
     const rawArgs = process.argv.slice(2);
@@ -111,6 +113,20 @@ program
         };
       }
 
+      // Handle --safemode-disable flag
+      if (options.safemodeDisable) {
+        const baseScanners = overrides.scanners || config.scanners;
+        if (baseScanners) {
+          overrides.scanners = {
+            passive: baseScanners.passive,
+            active: {
+              ...baseScanners.active,
+              safeMode: false,
+            },
+          };
+        }
+      }
+
       config = configManager.mergeConfig(overrides);
     } else {
       // ... build config manually as before, but ideally use ConfigurationManager for defaults/validation too
@@ -140,6 +156,7 @@ program
             enabled: !!enableActive,
             aggressiveness: AggressivenessLevel.MEDIUM,
             submitForms: true,
+            safeMode: options.safemodeDisable ? false : undefined,
           },
         },
         detectors: {

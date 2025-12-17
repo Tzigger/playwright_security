@@ -68,6 +68,18 @@ export class PassiveScanner implements IScanner {
     this.status = ScanStatus.RUNNING;
 
     try {
+      // Apply configuration to detectors
+      if (context.config.detectors) {
+        for (const detector of this.detectors) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (typeof (detector as any).updateConfig === 'function') {
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (detector as any).updateConfig(context.config.detectors);
+             this.logger.debug(`Applied configuration to ${detector.constructor.name}`);
+          }
+        }
+      }
+
       // Attach NetworkInterceptor la pagina curentă
       await this.networkInterceptor.attach(context.page);
 

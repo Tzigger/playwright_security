@@ -3,6 +3,7 @@ import { LogLevel } from '../../types/enums';
 import { Page } from 'playwright';
 import { AttackSurface, AttackSurfaceType, InjectionContext } from './DomExplorer';
 import { SPAContentWaiter, SPAFramework } from '../../utils/spa/SPAContentWaiter';
+import { PayloadFilter } from '../../utils/PayloadFilter';
 
 /**
  * Strategie de injecție
@@ -53,17 +54,20 @@ export interface InjectionResult {
  * - WAF bypass techniques
  * 
  * ENHANCED: Added SPA-aware waiting and longer timeouts
+ * ENHANCED: Added safe mode to filter destructive payloads
  */
 export class PayloadInjector {
   protected logger: Logger;
   protected spaWaiter: SPAContentWaiter;
   protected detectedFramework: SPAFramework = SPAFramework.UNKNOWN;
+  protected payloadFilter: PayloadFilter;
+  protected safeMode: boolean = false;
 
   // ENHANCED: Configurable timeouts (increased from 3s to 10s default)
   public static readonly DEFAULT_SPA_TIMEOUT = 10000;
   public static readonly DEFAULT_NETWORK_TIMEOUT = 10000;
 
-  constructor(logLevel: LogLevel = LogLevel.INFO) {
+  constructor(logLevel: LogLevel = LogLevel.INFO, safeMode: boolean = false) {
     this.logger = new Logger(logLevel, 'PayloadInjector');
     this.spaWaiter = new SPAContentWaiter({
       maxTimeout: PayloadInjector.DEFAULT_SPA_TIMEOUT,
@@ -71,6 +75,24 @@ export class PayloadInjector {
       waitForNetworkIdle: true,
       waitForAnimations: true,
     }, logLevel);
+    this.payloadFilter = new PayloadFilter(logLevel);
+    this.safeMode = safeMode;
+    
+    if (this.safeMode) {
+      this.logger.info('SafeMode ENABLED: Destructive payloads will be filtered');
+    }
+  }
+
+  /**
+   * Set safe mode
+   */
+  public setSafeMode(enabled: boolean): void {
+    this.safeMode = enabled;
+    if (this.safeMode) {
+      this.logger.info('SafeMode ENABLED: Destructive payloads will be filtered');
+    } else {
+      this.logger.warn('SafeMode DISABLED: All payloads will be used');
+    }
   }
 
   /**
@@ -100,6 +122,21 @@ export class PayloadInjector {
     const encoding = options.encoding || PayloadEncoding.NONE;
     const strategy = options.strategy || InjectionStrategy.REPLACE;
     const submit = options.submit !== undefined ? options.submit : true;
+
+    // Check safe mode
+    if (this.safeMode && !this.payloadFilter.isSafe(payload)) {
+      this.logger.warn(
+        `[Inject] BLOCKED (Safe Mode): Destructive payload attempt - ` +
+        `${payload.substring(0, 50)}...`
+      );
+      return {
+        payload,
+        encoding,
+        strategy,
+        surface,
+        error: 'Payload blocked by safe mode - contains destructive operations',
+      };
+    }
 
     this.logger.info(`[Inject] ${surface.type}:${surface.name} <- payload (${payload.length} chars, encoding:${encoding}, strategy:${strategy})`);
     this.logger.debug(`[Inject] Raw payload: ${payload.substring(0, 100)}${payload.length > 100 ? '...' : ''}`);
@@ -136,6 +173,7 @@ export class PayloadInjector {
                timeout: 5000 
              }).catch(() => {
                this.logger.debug(`Selector ${surface.selector} not found after reload`);
+
              });
            } else {
              // Generic wait for SPA initialization
@@ -601,6 +639,11 @@ export class PayloadInjector {
       
       default:
         payloads.push(...this.getGenericFuzzPayloads().slice(0, count));
+    }
+
+    // Apply safe mode filtering
+    if (this.safeMode) {
+      return this.payloadFilter.filterPayloads(payloads);
     }
 
     return payloads;

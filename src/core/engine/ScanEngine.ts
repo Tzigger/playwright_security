@@ -7,6 +7,7 @@ import { Logger } from '../../utils/logger/Logger';
 import { IScanner, ScanContext } from '../interfaces/IScanner';
 import { BrowserManager } from '../browser/BrowserManager';
 import { ConfigurationManager } from '../config/ConfigurationManager';
+import { TargetValidator } from '../../utils/TargetValidator';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { ReportFormat } from '../../types/enums';
@@ -24,6 +25,7 @@ export class ScanEngine extends EventEmitter {
   private logger: Logger;
   private browserManager: BrowserManager;
   private configManager: ConfigurationManager;
+  private targetValidator: TargetValidator;
   private scanners: Map<ScannerType, IScanner> = new Map();
   private vulnerabilities: Vulnerability[] = [];
   private scanId: string | null = null;
@@ -38,6 +40,7 @@ export class ScanEngine extends EventEmitter {
     this.logger = new Logger(LogLevel.INFO, 'ScanEngine');
     this.browserManager = BrowserManager.getInstance();
     this.configManager = ConfigurationManager.getInstance();
+    this.targetValidator = new TargetValidator(LogLevel.INFO);
   }
 
   /**
@@ -105,6 +108,34 @@ export class ScanEngine extends EventEmitter {
     }
 
     const config = this.configManager.getConfig();
+
+    // Validate target URL and enforce production guardrails
+    this.logger.info('Validating target...');
+    const targetValidation = this.targetValidator.validateUrl(config.target.url);
+    
+    // Log validation summary
+    if (targetValidation.warnings.length > 0 || targetValidation.recommendations.length > 0) {
+      this.logger.warn(this.targetValidator.getSummary(config.target.url));
+    }
+
+    // Enforce safe mode on non-local targets
+    const activeScannerConfig = config.scanners.active;
+    if (activeScannerConfig.enabled && !targetValidation.isLocal) {
+      // Auto-enable safe mode for non-local targets if not explicitly set
+      if (activeScannerConfig.safeMode === undefined) {
+        this.logger.warn(
+          'Target is non-local (non-localhost). Automatically enabling safe mode to prevent destructive payloads.'
+        );
+        activeScannerConfig.safeMode = true;
+      }
+      
+      if (!targetValidation.isLocal && activeScannerConfig.enabled) {
+        this.logger.warn(
+          `SECURITY WARNING: Active scanning is enabled on ${targetValidation.environment} target. ` +
+          `Ensure you have explicit permission to perform active security testing on ${config.target.url}`
+        );
+      }
+    }
     this.scanId = uuidv4();
     this.scanStatus = ScanStatus.RUNNING;
     this.startTime = Date.now();

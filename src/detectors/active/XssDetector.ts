@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import { Page } from 'playwright';
 import { IActiveDetector, ActiveDetectorContext } from '../../core/interfaces/IActiveDetector';
 import { Vulnerability } from '../../types/vulnerability';
@@ -649,10 +648,9 @@ export class XssDetector implements IActiveDetector {
   }
 
   private async testAngularTemplateInjection(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
-    const uniqueMarker = randomBytes(6).toString('hex');
+    // ENHANCED: Use only arithmetic/logic payloads to avoid false positives from simple string reflection (e.g. in SQL errors)
     const angularPayloads = [
       { payload: '{{13337*9999}}', expected: '133356663' },
-      { payload: `{{'${uniqueMarker}'}}`, expected: uniqueMarker },
       { payload: '{{constructor.constructor("return 133356663")()}}', expected: '133356663' },
     ];
 
@@ -669,6 +667,8 @@ export class XssDetector implements IActiveDetector {
         const responseBody = result.response?.body || '';
         const domContent = await page.content();
         const evaluated = responseBody.includes(expected) || domContent.includes(expected);
+        
+        // Stricter check: ensure the expected result isn't just part of the payload (though for math it shouldn't be)
         const literalPresent = responseBody.includes(payload) || domContent.includes(payload.replace(/\{\{|\}\}/g, ''));
 
         this.markPayloadTested(surface, payload);

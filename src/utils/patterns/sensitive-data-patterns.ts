@@ -51,11 +51,19 @@ export const EMAIL_PATTERNS = [
 ];
 
 /**
- * Phone number patterns
+ * Phone number patterns - stricter to avoid false positives
+ * Requires explicit phone formatting characters or country code prefix
+ * Does NOT match IP addresses, version numbers, timestamps
  */
 export const PHONE_PATTERNS = [
-  /\+?[1-9]\d{1,14}/g, // E.164 format
-  /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, // US format
+  // E.164 format - requires explicit + prefix with country code (e.g., +1234567890)
+  /\+[1-9]\d{6,14}\b/g,
+  // US format with separators - requires explicit formatting (e.g., (123) 456-7890, 123-456-7890)
+  /\(\d{3}\)\s?\d{3}[-.\s]\d{4}\b/g,
+  // US format with dashes or dots as separators (e.g., 123-456-7890, 123.456.7890)
+  // Negative lookbehind to exclude IP-like patterns (xxx.xxx.xxx.xxx)
+  /(?<!\d\.)\b\d{3}[-]\d{3}[-]\d{4}\b/g,
+  /(?<!\d\.)\b\d{3}[.]\d{3}[.]\d{4}\b(?!\.\d)/g,
 ];
 
 /**
@@ -68,11 +76,16 @@ export const CREDIT_CARD_PATTERNS = [
 ];
 
 /**
- * SSN/CNP patterns
+ * SSN/CNP patterns - stricter to avoid false positives from code artifacts
  */
 export const SSN_PATTERNS = [
-  /\b\d{3}-\d{2}-\d{4}\b/g, // US SSN
-  /\b[1-8]\d{12}\b/g, // Romanian CNP
+  // US SSN - requires explicit dash formatting (XXX-XX-XXXX)
+  /\b\d{3}-\d{2}-\d{4}\b/g,
+  // Romanian CNP with stricter validation - 13 digits starting with valid century codes
+  // Only match if in a JSON context with quotes or explicit field name
+  /(?:["']cnp["']\s*[:=]\s*["']?)([12][0-9]{12})["']?/gi,
+  /(?:["']ssn["']\s*[:=]\s*["']?)(\d{3}-?\d{2}-?\d{4})["']?/gi,
+  /(?:["']social_security["']\s*[:=]\s*["']?)(\d{3}-?\d{2}-?\d{4})["']?/gi,
 ];
 
 /**

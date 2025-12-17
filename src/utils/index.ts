@@ -5,6 +5,10 @@
 // Logger
 export * from './logger/Logger';
 
+// Safety & Validation
+export * from './PayloadFilter';
+export * from './TargetValidator';
+
 // Helpers
 export * from './helpers/dom-helpers';
 export * from './helpers/network-helpers';
@@ -19,3 +23,4 @@ export * from './patterns/error-patterns';
 
 // Validators
 export * from './validators/config-validator';
+

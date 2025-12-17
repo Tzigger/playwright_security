@@ -143,6 +143,14 @@ export async function runActiveSecurityScan(
       enabled: [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       sensitivity: 'normal' as any,
+      tuning: {
+        sqli: {
+          booleanBased: {
+            minRowCountDiff: 1,
+            baselineSamples: 3
+          }
+        }
+      }
     },
     browser: {
       type: BrowserType.CHROMIUM,
@@ -256,6 +264,12 @@ export async function runPassiveSecurityScan(
       enabled: [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       sensitivity: 'normal' as any,
+      tuning: {
+        sensitiveData: {
+          emailAllowlist: ['example.com', 'test.com', 'noreply', 'support'],
+          skipPaths: ['/config', '/assets', '.js', '.css']
+        }
+      }
     },
     browser: {
       type: BrowserType.CHROMIUM,

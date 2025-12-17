@@ -19,6 +19,7 @@ import { EventEmitter } from 'events';
 import { BrowserContext, APIRequestContext } from 'playwright';
 import { Logger } from '../../utils/logger/Logger';
 import { LogLevel, VulnerabilitySeverity, VulnerabilityCategory } from '../../types/enums';
+import { PayloadFilter } from '../../utils/PayloadFilter';
 
 // Type alias for backwards compatibility
 type SeverityLevel = VulnerabilitySeverity;
@@ -176,11 +177,31 @@ export class ApiScanner extends EventEmitter {
   private vulnerabilities: Vulnerability[] = [];
   private testedEndpoints: Set<string> = new Set();
   private requestContext: APIRequestContext | null = null;
+  private payloadFilter: PayloadFilter;
+  private safeMode: boolean = false;
 
-  constructor(config: Partial<ApiScannerConfig> = {}, logLevel: LogLevel = LogLevel.INFO) {
+  constructor(config: Partial<ApiScannerConfig> = {}, logLevel: LogLevel = LogLevel.INFO, safeMode: boolean = false) {
     super();
     this.logger = new Logger(logLevel, 'ApiScanner');
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.payloadFilter = new PayloadFilter(logLevel);
+    this.safeMode = safeMode;
+    
+    if (this.safeMode) {
+      this.logger.info('SafeMode ENABLED: Destructive payloads will be filtered');
+    }
+  }
+
+  /**
+   * Set safe mode
+   */
+  public setSafeMode(enabled: boolean): void {
+    this.safeMode = enabled;
+    if (this.safeMode) {
+      this.logger.info('SafeMode ENABLED: Destructive payloads will be filtered');
+    } else {
+      this.logger.warn('SafeMode DISABLED: All payloads will be used');
+    }
   }
 
   /**
@@ -283,9 +304,14 @@ export class ApiScanner extends EventEmitter {
   private async testSqlInjection(endpoint: ApiEndpoint): Promise<ApiTestResult[]> {
     const results: ApiTestResult[] = [];
     const params = this.getTestableParams(endpoint);
+    
+    // Apply safe mode filtering
+    const payloads = this.safeMode 
+      ? this.payloadFilter.filterPayloads(SQL_PAYLOADS)
+      : SQL_PAYLOADS;
 
     for (const param of params) {
-      for (const payload of SQL_PAYLOADS.slice(0, this.config.maxPayloadsPerEndpoint)) {
+      for (const payload of payloads.slice(0, this.config.maxPayloadsPerEndpoint)) {
         const result = await this.injectPayload(endpoint, param, payload, ApiTestCategory.SQL_INJECTION);
         
         if (result && this.detectSqlInjection(result)) {
@@ -430,9 +456,14 @@ export class ApiScanner extends EventEmitter {
   private async testNoSqlInjection(endpoint: ApiEndpoint): Promise<ApiTestResult[]> {
     const results: ApiTestResult[] = [];
     const params = this.getTestableParams(endpoint);
+    
+    // Apply safe mode filtering
+    const payloads = this.safeMode 
+      ? this.payloadFilter.filterPayloads(NOSQL_PAYLOADS)
+      : NOSQL_PAYLOADS;
 
     for (const param of params) {
-      for (const payload of NOSQL_PAYLOADS) {
+      for (const payload of payloads) {
         const result = await this.injectPayload(endpoint, param, payload, ApiTestCategory.NOSQL_INJECTION);
         
         if (result && this.detectNoSqlInjection(result)) {

@@ -27,12 +27,24 @@ interface SqlInjectionDetectorConfig {
   maxSurfacesPerPage?: number;
   skipTimeBasedWhenErrorBasedSucceeds?: boolean;
   permissiveMode?: boolean;
+  tuning?: {
+    booleanBased?: {
+      minRowCountDiff?: number;
+      baselineSamples?: number;
+    };
+  };
 }
 
 type ResolvedSqlInjectionDetectorConfig = Required<
-  Omit<SqlInjectionDetectorConfig, 'techniqueTimeouts'>
+  Omit<SqlInjectionDetectorConfig, 'techniqueTimeouts' | 'tuning'>
 > & {
   techniqueTimeouts: TechniqueTimeouts;
+  tuning: {
+    booleanBased: {
+      minRowCountDiff: number;
+      baselineSamples: number;
+    };
+  };
 };
 
 interface SqlDetectorStats {
@@ -49,6 +61,12 @@ const DEFAULT_SQLI_DETECTOR_CONFIG: ResolvedSqlInjectionDetectorConfig = {
     errorBased: 12000,
     booleanBased: 15000,
     timeBased: 25000,
+  },
+  tuning: {
+    booleanBased: {
+      minRowCountDiff: 1,
+      baselineSamples: 3,
+    },
   },
   skipRedundantTests: true,
   allowDuplicatePayloads: false,
@@ -134,6 +152,12 @@ export class SqlInjectionDetector implements IActiveDetector {
       ...base,
       ...overrides,
       techniqueTimeouts: { ...base.techniqueTimeouts, ...(overrides.techniqueTimeouts ?? {}) },
+      tuning: {
+        booleanBased: {
+          ...base.tuning.booleanBased,
+          ...(overrides.tuning?.booleanBased ?? {}),
+        },
+      },
     };
   }
 
@@ -474,6 +498,53 @@ export class SqlInjectionDetector implements IActiveDetector {
   }
 
   /**
+   * Measure baseline response variance to filter out noise
+   */
+  private async measureBaselineVariance(page: Page, surface: AttackSurface, baseUrl: string): Promise<number> {
+    const samples = this.config.tuning.booleanBased.baselineSamples;
+    const lengths: number[] = [];
+    
+    for (let i = 0; i < samples; i++) {
+      const result = await this.injector.inject(page, surface, surface.value || '', {
+        encoding: PayloadEncoding.NONE,
+        submit: true,
+        baseUrl,
+      });
+      if (result && result.response && result.response.body) {
+        lengths.push(result.response.body.length);
+      }
+    }
+
+    if (lengths.length < 2) return 0;
+
+    const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / lengths.length;
+    
+    return variance;
+  }
+
+  /**
+   * Extract length of main data array from JSON response
+   */
+  private extractDataArrayLength(json: any): number {
+    if (!json || typeof json !== 'object') return -1;
+    
+    // Common keys for data lists
+    const dataKeys = ['data', 'items', 'results', 'products', 'users'];
+    
+    for (const key of dataKeys) {
+      if (Array.isArray(json[key])) {
+        return json[key].length;
+      }
+    }
+    
+    // If root is array
+    if (Array.isArray(json)) return json.length;
+    
+    return -1;
+  }
+
+  /**
    * Test for boolean-based blind SQL injection
    */
   private async testBooleanBased(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
@@ -501,6 +572,15 @@ export class SqlInjectionDetector implements IActiveDetector {
       return null;
     }
 
+    // ENHANCED: False Positive Reduction
+    // Boolean-based SQLi should result in a valid page load (200 OK) for the True condition.
+    // If the "True" payload causes a 500 error, the query is likely broken/invalid, not logically True.
+    const trueResponse = trueResults[0]?.response;
+    if (trueResponse?.status && trueResponse.status >= 500) {
+      this.logger.debug(`[SQLi] Ignoring Boolean-based candidate for ${surface.name} because True payload returned ${trueResponse.status}`);
+      return null;
+    }
+
     // JSON-aware comparison for API endpoints
     if (this.isJsonResponse(trueResults[0]) || surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY) {
       const jsonDiff = this.compareJsonResponses(trueResults, falseResults);
@@ -519,12 +599,21 @@ export class SqlInjectionDetector implements IActiveDetector {
     const avgTrueLength = trueLengths.reduce((a, b) => a + b, 0) / trueLengths.length;
     const avgFalseLength = falseLengths.reduce((a, b) => a + b, 0) / falseLengths.length;
 
-    const diff = Math.abs(avgTrueLength - avgFalseLength);
-    const threshold = Math.max(avgTrueLength, avgFalseLength) * (this.config.permissiveMode ? 0.05 : 0.1);
+    // Measure baseline variance to filter out noise
+    const baselineVariance = await this.measureBaselineVariance(page, surface, baseUrl);
 
-    if (diff > threshold && (diff > 100 || (this.config.permissiveMode && diff > 20)) && trueResults[0]) {
+    const diff = Math.abs(avgTrueLength - avgFalseLength);
+    
+    // Dynamic threshold based on baseline variance
+    // We require the difference to be significantly larger than the natural variance
+    const varianceThreshold = baselineVariance * 2 + 100;
+    const percentageThreshold = Math.max(avgTrueLength, avgFalseLength) * (this.config.permissiveMode ? 0.05 : 0.1);
+    
+    const threshold = Math.max(percentageThreshold, varianceThreshold);
+
+    if (diff > threshold && trueResults[0]) {
        // Log metrics for debugging
-       this.logger.debug(`[SQLi] Boolean diff: true=${avgTrueLength}, false=${avgFalseLength}, diff=${diff}, threshold=${threshold}`);
+       this.logger.debug(`[SQLi] Boolean diff: true=${avgTrueLength}, false=${avgFalseLength}, diff=${diff}, threshold=${threshold}, variance=${baselineVariance}`);
       return this.createVulnerability(surface, trueResults[0], SqlInjectionTechnique.BOOLEAN_BASED, baseUrl, {
         confidence: this.getTechniqueConfidence(SqlInjectionTechnique.BOOLEAN_BASED),
       });
@@ -965,15 +1054,23 @@ export class SqlInjectionDetector implements IActiveDetector {
     const contentLenFalse = falseResults[0]?.response?.body?.length || 0;
     const contentDiff = Math.abs(contentLenTrue - contentLenFalse) > Math.max(contentLenTrue, contentLenFalse) * 0.1;
 
+    // Check for array length differences in top-level data/items
+    const trueArrayLen = this.extractDataArrayLength(trueJson);
+    const falseArrayLen = this.extractDataArrayLength(falseJson);
+    const minDiff = this.config.tuning.booleanBased.minRowCountDiff;
+    const dataArrayDiff = trueArrayLen !== -1 && falseArrayLen !== -1 && Math.abs(trueArrayLen - falseArrayLen) >= minDiff;
+
     const confidence =
       (structure.structureDiff ? 0.3 : 0) +
       (arrayDiff || keyDiff || depthDiff ? 0.3 : 0) +
+      (dataArrayDiff ? 0.4 : 0) + // High confidence for data array length diff
       (statusDiff ? 0.2 : 0) +
       ((httpStatusDiff || contentDiff) ? 0.2 : 0);
 
     const reasons: string[] = [];
     if (structure.structureDiff) reasons.push(`Structure differs at keys: ${structure.keyDiffs.slice(0, 5).join(', ')}`);
     if (arrayDiff) reasons.push(`Array count differs: ${metricsTrue.arrayCount} vs ${metricsFalse.arrayCount}`);
+    if (dataArrayDiff) reasons.push(`Data array length differs: ${trueArrayLen} vs ${falseArrayLen}`);
     if (keyDiff) reasons.push(`Total keys differ: ${metricsTrue.totalKeys} vs ${metricsFalse.totalKeys}`);
     if (depthDiff) reasons.push(`Depth differs: ${metricsTrue.objectDepth} vs ${metricsFalse.objectDepth}`);
     if (statusDiff) reasons.push(`JSON status differs: ${trueStatus} vs ${falseStatus}`);
@@ -987,6 +1084,7 @@ export class SqlInjectionDetector implements IActiveDetector {
       diff: {
         structureDiff: structure.keyDiffs,
         arrays: { true: metricsTrue.arrayCount, false: metricsFalse.arrayCount },
+        dataArray: { true: trueArrayLen, false: falseArrayLen },
         keys: { true: metricsTrue.totalKeys, false: metricsFalse.totalKeys },
         depth: { true: metricsTrue.objectDepth, false: metricsFalse.objectDepth },
         status: { json: { true: trueStatus, false: falseStatus }, http: { true: trueHttpStatus, false: falseHttpStatus } },

@@ -23,7 +23,8 @@
       "maxInputsPerPage": 50,
       "delayBetweenRequests": 100,
       "skipReadOnlyInputs": true,
-      "submitForms": false
+      "submitForms": false,
+      "safeMode": false
     }
   },
   "detectors": {
@@ -32,7 +33,19 @@
     "customRules": [],
     "sensitivity": "normal",
     "falsePositiveThreshold": 0.3,
-    "minConfidence": 0.5
+    "minConfidence": 0.5,
+    "tuning": {
+      "sqli": {
+        "booleanBased": {
+          "minRowCountDiff": 1,
+          "baselineSamples": 3
+        }
+      },
+      "sensitiveData": {
+        "emailAllowlist": [],
+        "skipPaths": ["/config", "*.js"]
+      }
+    }
   },
   "browser": {
     "type": "chromium",

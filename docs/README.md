@@ -34,6 +34,37 @@ New to Kinetic? Start here:
    - Custom detectors and reporters
    - **~23 KB** | **Practical Examples**
 
+## 🛡️ Safe Mode & Production
+
+Protect your production environments with Safe Mode:
+
+1. **[Safe Mode Quick Start](./SAFE-MODE-QUICKSTART.md)**
+   - Get running with Safe Mode in 5 minutes
+   - Basic configuration and usage
+   - **~8 KB** | **Quick Start**
+
+2. **[Safe Mode Guide](./SAFE-MODE.md)**
+   - Comprehensive guide to Safe Mode features
+   - Production guardrails and payload filtering
+   - **~10 KB** | **Full Guide**
+
+3. **[Safe Mode API](./SAFE-MODE-API.md)**
+   - API reference for Safe Mode components
+   - `PayloadFilter`, `TargetValidator`, etc.
+   - **~12 KB** | **API Reference**
+
+4. **[Safe Mode Architecture](./SAFE-MODE-ARCHITECTURE.md)**
+   - Architecture diagrams and flowcharts
+   - Understanding how Safe Mode works internally
+   - **~5 KB** | **Architecture**
+
+## 🗺️ Roadmap
+
+- **[OWASP 2025 Roadmap](./OWASP-2025-ROADMAP.md)**
+  - Implementation status of OWASP Top 10 2025
+  - Future plans and milestones
+  - **~10 KB** | **Project Roadmap**
+
 ## ⚠️ Known Limitations
 
 Important information about current limitations:
