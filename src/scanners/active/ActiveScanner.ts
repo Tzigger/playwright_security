@@ -6,6 +6,9 @@ import { LogLevel, ScanStatus, VulnerabilitySeverity, ScannerType } from '../../
 import { DomExplorer, AttackSurfaceType } from './DomExplorer';
 import { Request } from 'playwright';
 import { VerificationEngine } from '../../core/verification/VerificationEngine';
+import { TimeoutManager } from '../../core/timeout/TimeoutManager';
+import { SPAWaitStrategy } from '../../core/timeout/SPAWaitStrategy';
+import { OperationType } from '../../types/timeout';
 
 /**
  * Configurare ActiveScanner
@@ -35,6 +38,8 @@ export class ActiveScanner extends BaseScanner {
   private detectors: Map<string, IActiveDetector> = new Map();
   private domExplorer: DomExplorer;
   private verificationEngine: VerificationEngine;
+  private timeoutManager: TimeoutManager;
+  private spaWaitStrategy: SPAWaitStrategy;
   private visitedUrls: Set<string> = new Set();
   private crawlQueue: string[] = [];
 
@@ -55,6 +60,8 @@ export class ActiveScanner extends BaseScanner {
 
     this.domExplorer = new DomExplorer(LogLevel.INFO);
     this.verificationEngine = new VerificationEngine();
+    this.timeoutManager = new TimeoutManager();
+    this.spaWaitStrategy = new SPAWaitStrategy();
   }
 
   /**
@@ -161,12 +168,11 @@ export class ActiveScanner extends BaseScanner {
         
         if (needsNavigation) {
           try {
-            const timeout = config.target.timeout || 30000;
+            const timeout = this.timeoutManager.getTimeout(OperationType.NAVIGATION);
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
-            await page.waitForLoadState('networkidle', { timeout: Math.min(timeout, 10000) }).catch(() => {});
             
-            // PERFORMANCE FIX: Reduced from 2000ms to 500ms for SPA hydration
-            await page.waitForTimeout(500); 
+            // Use SPA Wait Strategy for intelligent waiting
+            await this.spaWaitStrategy.waitForStability(page, timeout, 'navigation');
           } catch (error) {
             context.logger.warn(`Failed to navigate to ${url}: ${error}`);
             page.off('request', requestListener);
@@ -202,12 +208,12 @@ export class ActiveScanner extends BaseScanner {
         // Retry logic for slow SPAs
         if (allSurfaces.length === 0) {
             context.logger.info('No surfaces found initially, waiting for potential SPA hydration...');
-            await page.waitForTimeout(3000); // Reduced from 5000ms
+            await this.spaWaitStrategy.waitForStability(page, 3000, 'navigation');
             allSurfaces = await this.domExplorer.explore(page, capturedRequests);
             
             if (allSurfaces.length === 0) {
-                 // Try one more time with a shorter wait (reduced from 5000ms to 2000ms)
-                 await page.waitForTimeout(2000);
+                 // Try one more time with a shorter wait
+                 await this.spaWaitStrategy.waitForStability(page, 2000, 'navigation');
                  allSurfaces = await this.domExplorer.explore(page, capturedRequests);
             }
         }
@@ -266,8 +272,8 @@ export class ActiveScanner extends BaseScanner {
 
               await clickable.element.click({ timeout: 1000 }).catch(() => {});
               
-              // PERFORMANCE FIX: Reduced network idle timeout from 2000ms to 1000ms
-              await this.domExplorer.waitForNetworkIdle(page, 1000);
+              // Use SPA Wait Strategy instead of simple network idle
+              await this.spaWaitStrategy.waitForStability(page, 2000, 'api');
               
               page.off('request', clickListener);
 

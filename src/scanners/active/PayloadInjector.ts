@@ -2,7 +2,8 @@ import { Logger } from '../../utils/logger/Logger';
 import { LogLevel } from '../../types/enums';
 import { Page } from 'playwright';
 import { AttackSurface, AttackSurfaceType, InjectionContext } from './DomExplorer';
-import { SPAContentWaiter, SPAFramework } from '../../utils/spa/SPAContentWaiter';
+import { SPAWaitStrategy } from '../../core/timeout/SPAWaitStrategy';
+import { SPAFramework } from '../../types/timeout';
 import { PayloadFilter } from '../../utils/PayloadFilter';
 
 /**
@@ -58,7 +59,7 @@ export interface InjectionResult {
  */
 export class PayloadInjector {
   protected logger: Logger;
-  protected spaWaiter: SPAContentWaiter;
+  protected spaWaitStrategy: SPAWaitStrategy;
   protected detectedFramework: SPAFramework = SPAFramework.UNKNOWN;
   protected payloadFilter: PayloadFilter;
   protected safeMode: boolean = false;
@@ -69,12 +70,7 @@ export class PayloadInjector {
 
   constructor(logLevel: LogLevel = LogLevel.INFO, safeMode: boolean = false) {
     this.logger = new Logger(logLevel, 'PayloadInjector');
-    this.spaWaiter = new SPAContentWaiter({
-      maxTimeout: PayloadInjector.DEFAULT_SPA_TIMEOUT,
-      minStableTime: 800,
-      waitForNetworkIdle: true,
-      waitForAnimations: true,
-    }, logLevel);
+    this.spaWaitStrategy = new SPAWaitStrategy(logLevel);
     this.payloadFilter = new PayloadFilter(logLevel);
     this.safeMode = safeMode;
     
@@ -99,10 +95,10 @@ export class PayloadInjector {
    * Detect SPA framework for optimized waiting
    */
   public async detectSPAFramework(page: Page): Promise<SPAFramework> {
-    const detection = await this.spaWaiter.detectFramework(page);
-    this.detectedFramework = detection.framework;
-    this.logger.info(`Detected SPA framework: ${detection.framework} (confidence: ${detection.confidence}%)`);
-    return detection.framework;
+    const framework = await this.spaWaitStrategy.detectFramework(page);
+    this.detectedFramework = framework;
+    this.logger.info(`Detected SPA framework: ${framework}`);
+    return framework;
   }
 
   /**
@@ -245,13 +241,13 @@ export class PayloadInjector {
         };
         this.logger.debug(`[Inject] API Response: status=${apiResponse.status}, bodyLen=${apiResponse.body.length}, time=${endTime - startTime}ms`);
       } else {
-        // PERFORMANCE FIX: Use minimal waiting for background requests
-        // Only wait for navigation/network to settle with reduced timeout
+        // Use SPA Wait Strategy for intelligent waiting
         const isBackgroundRequest = surface.type === AttackSurfaceType.API_PARAM || 
                                     surface.type === AttackSurfaceType.JSON_BODY;
-        const networkTimeout = isBackgroundRequest ? 2000 : PayloadInjector.DEFAULT_NETWORK_TIMEOUT;
+        const context = isBackgroundRequest ? 'api' : 'navigation';
+        const timeout = isBackgroundRequest ? 2000 : PayloadInjector.DEFAULT_NETWORK_TIMEOUT;
         
-        await page.waitForLoadState('networkidle', { timeout: networkTimeout }).catch(() => {});
+        await this.spaWaitStrategy.waitForStability(page, timeout, context);
         
         const body = await page.content();
         result.response = {
