@@ -4,6 +4,9 @@
  */
 
 import { ErrorBasedDetector } from '../detectors/active/ErrorBasedDetector';
+import { InjectionDetector } from '../detectors/active/InjectionDetector';
+import { PathTraversalDetector } from '../detectors/active/PathTraversalDetector';
+import { SsrfDetector } from '../detectors/active/SsrfDetector';
 import { SqlInjectionDetector } from '../detectors/active/SqlInjectionDetector';
 import { XssDetector } from '../detectors/active/XssDetector';
 import { CookieSecurityDetector } from '../detectors/passive/CookieSecurityDetector';
@@ -44,6 +47,34 @@ export function registerBuiltInDetectors(): void {
     type: 'active',
     category: 'errors',
     description: 'Detects information disclosure through error messages',
+    enabledByDefault: true,
+  });
+
+  // Optional Active Detectors (explicit enablement recommended)
+  registry.registerActiveDetector(new SsrfDetector(), {
+    id: 'ssrf',
+    name: 'Server-Side Request Forgery (SSRF) Detector',
+    type: 'active',
+    category: 'ssrf',
+    description: 'Detects SSRF via URL fetch/redirect behavior and response indicators',
+    enabledByDefault: true,
+  });
+
+  registry.registerActiveDetector(new PathTraversalDetector(), {
+    id: 'path-traversal',
+    name: 'Path Traversal Detector',
+    type: 'active',
+    category: 'traversal',
+    description: 'Detects path traversal and local file inclusion style issues',
+    enabledByDefault: true,
+  });
+
+  registry.registerActiveDetector(new InjectionDetector(), {
+    id: 'command-injection',
+    name: 'Command Injection / SSTI / XXE Detector',
+    type: 'active',
+    category: 'cmdi',
+    description: 'Detects OS command injection and other injection classes (SSTI/XXE) where supported',
     enabledByDefault: true,
   });
 

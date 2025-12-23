@@ -100,6 +100,16 @@ export function normalizeUrl(url: string): string {
 }
 
 /**
+ * Normalize URL for payload correlation/matching.
+ * Intentionally drops query + fragment and keeps only origin + pathname.
+ */
+export function normalizeUrlForMatching(url: string): string {
+  const parsed = parseUrl(url);
+  if (!parsed) return url;
+  return `${parsed.origin}${parsed.pathname}`;
+}
+
+/**
  * Extract query parameters from URL
  */
 export function extractQueryParams(url: string): Record<string, string> {

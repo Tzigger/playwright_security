@@ -4,6 +4,12 @@ import { HttpMethod } from './enums';
  * Evidence collected during vulnerability detection
  */
 export interface Evidence {
+  /** Payload used to trigger/detect the vulnerability (canonical field for reporting/manual confirmation) */
+  payloadUsed?: string;
+
+  /** @deprecated Use payloadUsed instead */
+  payload?: string;
+
   /** The URL where the vulnerability was found */
   url?: string;
 

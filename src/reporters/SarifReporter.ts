@@ -38,10 +38,17 @@ export class SarifReporter extends BaseReporter {
           properties: { category: v.category, severity: v.severity },
         };
       }
+          const payload =
+            v.evidence?.payload ||
+            (v.evidence?.metadata ? (v.evidence.metadata as Record<string, unknown>)['payload'] : undefined) ||
+            v.evidence?.request?.body ||
+            v.evidence?.element?.payload;
+
           return {
         ruleId,
         level: this.severityToSarif(v.severity),
         message: { text: v.title },
+        properties: payload ? { payload } : undefined,
         locations: [
           {
             physicalLocation: {

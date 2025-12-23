@@ -438,6 +438,7 @@ export class SqlInjectionDetector implements IActiveDetector {
             owasp,
             url: result.response?.url || baseUrl,
             evidence: {
+              payload,
               request: {
                 body: payload,
                 url: surface.metadata?.url || baseUrl,
@@ -736,6 +737,7 @@ export class SqlInjectionDetector implements IActiveDetector {
         cwe,
         owasp,
         evidence: {
+          payload: result.payload,
           request: {
             body: result.payload,
             url: result.response?.url || result.surface.metadata?.url || '',
@@ -1249,6 +1251,7 @@ export class SqlInjectionDetector implements IActiveDetector {
       confidence, // Add confidence at top level
       url: result.response?.url || baseUrl,
       evidence: {
+        payload: result.payload,
         request: {
           body: result.payload,
           url: result.response?.url || surface.metadata?.url || baseUrl,

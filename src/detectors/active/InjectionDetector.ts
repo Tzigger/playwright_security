@@ -148,6 +148,7 @@ export class InjectionDetector implements IActiveDetector {
             confidence: calculatedConfidence, // Add confidence at top level
             url: result.response?.url || baseUrl,
             evidence: {
+              payload,
               request: { body: payload },
               response: { body: body.substring(0, 1000) },
               metadata: {
@@ -211,6 +212,7 @@ export class InjectionDetector implements IActiveDetector {
             confidence: 0.95, // Add confidence at top level
             url: result.response?.url || baseUrl,
             evidence: {
+              payload,
               request: { body: payload },
               response: { body: body.substring(0, 500) }
             },

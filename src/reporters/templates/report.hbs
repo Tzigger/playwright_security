@@ -67,14 +67,18 @@
                     {{#if evidence.metadata.surfaceName}}{{evidence.metadata.surfaceName}}{{else}}n/a{{/if}}
                     {{#if evidence.metadata.contextInfo.surfaceType}} ({{evidence.metadata.contextInfo.surfaceType}}){{/if}}
                   </div>
-                  {{#if evidence.metadata.payload}}
-                    <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.metadata.payload}}</span></div>
+                  {{#if evidence.payload}}
+                    <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.payload}}</span></div>
                   {{else}}
-                    {{#if evidence.request.body}}
-                      <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.request.body}}</span></div>
+                    {{#if evidence.metadata.payload}}
+                      <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.metadata.payload}}</span></div>
                     {{else}}
-                      {{#if evidence.element.payload}}
-                        <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.element.payload}}</span></div>
+                      {{#if evidence.request.body}}
+                        <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.request.body}}</span></div>
+                      {{else}}
+                        {{#if evidence.element.payload}}
+                          <div class="kv"><b>Payload:</b> <span class="mono">{{evidence.element.payload}}</span></div>
+                        {{/if}}
                       {{/if}}
                     {{/if}}
                   {{/if}}

@@ -33,6 +33,8 @@ export { SqlInjectionDetector } from './detectors/active/SqlInjectionDetector';
 export { XssDetector } from './detectors/active/XssDetector';
 export { ErrorBasedDetector } from './detectors/active/ErrorBasedDetector';
 export { PathTraversalDetector } from './detectors/active/PathTraversalDetector';
+export { SsrfDetector } from './detectors/active/SsrfDetector';
+export { InjectionDetector } from './detectors/active/InjectionDetector';
 
 // Verification
 export { VerificationEngine } from './core/verification/VerificationEngine';

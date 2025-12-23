@@ -306,6 +306,7 @@ export class ErrorBasedDetector implements IActiveDetector {
         cwe: 'CWE-209',
         owasp,
         evidence: {
+          payload: result.payload,
           request: { body: result.payload },
           response: { body: content.substring(0, 1000) },
         },
@@ -328,6 +329,7 @@ export class ErrorBasedDetector implements IActiveDetector {
         cwe: 'CWE-209',
         owasp,
         evidence: {
+          payload: result.payload,
           request: { body: result.payload },
           response: { body: content.substring(0, 1000) },
         },

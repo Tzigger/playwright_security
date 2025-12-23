@@ -299,7 +299,7 @@ export class PayloadInjector {
     if (surface.type === AttackSurfaceType.API_PARAM) {
       const apiUrl = new URL(url);
       apiUrl.searchParams.set(surface.name, payload);
-      const headers = originalHeaders && Object.keys(originalHeaders).length > 0 ? originalHeaders : undefined;
+      const headers = this.sanitizeReplayHeaders(originalHeaders);
       response = await page.request.fetch(apiUrl.toString(), {
         method,
         headers,
@@ -322,10 +322,15 @@ export class PayloadInjector {
       this.logger.debug(`[JSON Injection] Key: ${key} = ${payload.substring(0, 50)}...`);
       this.logger.debug(`[JSON Injection] Body: ${JSON.stringify(body).substring(0, 200)}...`);
       
+      const replayHeaders = {
+        ...this.sanitizeReplayHeaders(originalHeaders),
+        'Content-Type': 'application/json',
+      };
+
       response = await page.request.fetch(url, {
         method,
         data: body,
-        headers: { 'Content-Type': 'application/json' }
+        headers: replayHeaders,
       });
     }
 
@@ -336,6 +341,49 @@ export class PayloadInjector {
       status: response.status(),
       headers: response.headers(),
     };
+  }
+
+  /**
+   * Sanitize captured headers for API replay.
+   *
+   * Playwright's request client may reject or mis-handle hop-by-hop / computed headers.
+   * We keep auth/session-relevant headers (Authorization, Cookie, etc.) and drop the rest.
+   */
+  private sanitizeReplayHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
+    if (!headers || Object.keys(headers).length === 0) return undefined;
+
+    const blocked = new Set([
+      'host',
+      'content-length',
+      'connection',
+      'keep-alive',
+      'proxy-authenticate',
+      'proxy-authorization',
+      'te',
+      'trailers',
+      'transfer-encoding',
+      'upgrade',
+      'sec-fetch-site',
+      'sec-fetch-mode',
+      'sec-fetch-dest',
+      'sec-fetch-user',
+      'sec-ch-ua',
+      'sec-ch-ua-mobile',
+      'sec-ch-ua-platform',
+      'accept-encoding',
+      // 'origin', // Allow Origin for API replay
+      // 'referer', // Allow Referer for API replay
+    ]);
+
+    const sanitized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+      const lowerKey = key.toLowerCase();
+      if (blocked.has(lowerKey)) continue;
+      if (typeof value !== 'string' || value.trim().length === 0) continue;
+      sanitized[key] = value;
+    }
+
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
   }
 
   /**

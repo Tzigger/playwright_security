@@ -28,7 +28,15 @@
     }
   },
   "detectors": {
-    "enabled": ["*"],
+    "enabled": [
+      "sql-injection",
+      "xss",
+      "error-based",
+      "sensitive-data",
+      "header-security",
+      "cookie-security",
+      "insecure-transmission"
+    ],
     "disabled": [],
     "customRules": [],
     "sensitivity": "normal",

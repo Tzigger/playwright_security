@@ -81,6 +81,7 @@ export class PathTraversalDetector implements IActiveDetector {
             owasp,
             url: result.response?.url || baseUrl,
             evidence: {
+              payload,
               request: { body: payload },
               response: { body: body.substring(0, 500) }
             },

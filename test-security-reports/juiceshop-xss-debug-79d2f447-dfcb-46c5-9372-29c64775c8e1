@@ -1,0 +1,362 @@
+{
+  "scanId": "79d2f447-dfcb-46c5-9372-29c64775c8e1",
+  "targetUrl": "http://localhost:3000",
+  "status": "completed",
+  "startTime": 1766484324205,
+  "endTime": 1766491118386,
+  "duration": 6794181,
+  "vulnerabilities": [
+    {
+      "id": "sqli-boolean-based-q-1766484387356",
+      "title": "SQL Injection (boolean-based)",
+      "description": "Boolean-based blind SQL injection detected through differential responses in api-param 'q'",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-89",
+      "owasp": "A05:2025",
+      "confidence": 1.2,
+      "url": "http://localhost:3000/rest/products/search?q=",
+      "evidence": {
+        "payload": "' OR 'a'='a",
+        "request": {
+          "body": "' OR 'a'='a",
+          "url": "http://localhost:3000/rest/products/search?q=",
+          "method": "GET"
+        },
+        "response": {
+          "body": "{\"status\":\"success\",\"data\":[{\"id\":1,\"name\":\"Apple Juice (1000ml)\",\"description\":\"The all-time classic.\",\"price\":1.99,\"deluxePrice\":0.99,\"image\":\"apple_juice.jpg\",\"createdAt\":\"2025-12-22 13:53:59.982 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.982 +00:00\",\"deletedAt\":null},{\"id\":24,\"name\":\"Apple Pomace\",\"description\":\"Finest pressings of apples. Allergy disclaimer: Might contain traces of worms. Can be <a href=\\\"/#recycle\\\">sent back to us</a> for recycling.\",\"price\":0.89,\"deluxePrice\":0.89,\"image\":\"apple_pressings.jpg\",\"createdAt\":\"2025-12-22 13:53:59.989 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.989 +00:00\",\"deletedAt\":null},{\"id\":6,\"name\":\"Banana Juice (1000ml)\",\"description\":\"Monkeys love it the most.\",\"price\":1.99,\"deluxePrice\":1.99,\"image\":\"banana_juice.jpg\",\"createdAt\":\"2025-12-22 13:53:59.983 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.983 +00:00\",\"deletedAt\":null},{\"id\":42,\"name\":\"Best Juice Shop Salesman Artwork\",\"description\":\"Unique digital painting depicting Stan, our most qualifi",
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "feature-policy": "payment 'self'",
+            "x-recruiting": "/#/jobs",
+            "content-type": "application/json; charset=utf-8",
+            "etag": "W/\"354c-dTdMK7+I+OjWN941QSPqqz4h4u8\"",
+            "vary": "Accept-Encoding",
+            "content-encoding": "br",
+            "date": "Tue, 23 Dec 2025 10:06:22 GMT",
+            "connection": "keep-alive",
+            "keep-alive": "timeout=5",
+            "transfer-encoding": "chunked"
+          }
+        },
+        "metadata": {
+          "technique": "boolean-based",
+          "confidence": 1.2,
+          "jsonDiff": {
+            "isSignificant": true,
+            "confidence": 1.2,
+            "reason": "Structure differs at keys: data.0, data.1, data.2, data.3, data.4; Data array length differs: 36 vs 0; Total keys differ: 362 vs 2; Depth differs: 3 vs 2; Content length differs: 13639 vs 30",
+            "diff": {
+              "structureDiff": [
+                "data.0",
+                "data.1",
+                "data.2",
+                "data.3",
+                "data.4",
+                "data.5",
+                "data.6",
+                "data.7",
+                "data.8",
+                "data.9",
+                "data.10",
+                "data.11",
+                "data.12",
+                "data.13",
+                "data.14",
+                "data.15",
+                "data.16",
+                "data.17",
+                "data.18",
+                "data.19",
+                "data.20",
+                "data.21",
+                "data.22",
+                "data.23",
+                "data.24",
+                "data.25",
+                "data.26",
+                "data.27",
+                "data.28",
+                "data.29",
+                "data.30",
+                "data.31",
+                "data.32",
+                "data.33",
+                "data.34",
+                "data.35"
+              ],
+              "arrays": {
+                "true": 1,
+                "false": 1
+              },
+              "dataArray": {
+                "true": 36,
+                "false": 0
+              },
+              "keys": {
+                "true": 362,
+                "false": 2
+              },
+              "depth": {
+                "true": 3,
+                "false": 2
+              },
+              "status": {
+                "json": {
+                  "true": "success",
+                  "false": "success"
+                },
+                "http": {
+                  "true": 200,
+                  "false": 200
+                }
+              }
+            }
+          },
+          "timing": 37,
+          "responseComparison": {
+            "isSignificant": true,
+            "confidence": 1.2,
+            "reason": "Structure differs at keys: data.0, data.1, data.2, data.3, data.4; Data array length differs: 36 vs 0; Total keys differ: 362 vs 2; Depth differs: 3 vs 2; Content length differs: 13639 vs 30",
+            "diff": {
+              "structureDiff": [
+                "data.0",
+                "data.1",
+                "data.2",
+                "data.3",
+                "data.4",
+                "data.5",
+                "data.6",
+                "data.7",
+                "data.8",
+                "data.9",
+                "data.10",
+                "data.11",
+                "data.12",
+                "data.13",
+                "data.14",
+                "data.15",
+                "data.16",
+                "data.17",
+                "data.18",
+                "data.19",
+                "data.20",
+                "data.21",
+                "data.22",
+                "data.23",
+                "data.24",
+                "data.25",
+                "data.26",
+                "data.27",
+                "data.28",
+                "data.29",
+                "data.30",
+                "data.31",
+                "data.32",
+                "data.33",
+                "data.34",
+                "data.35"
+              ],
+              "arrays": {
+                "true": 1,
+                "false": 1
+              },
+              "dataArray": {
+                "true": 36,
+                "false": 0
+              },
+              "keys": {
+                "true": 362,
+                "false": 2
+              },
+              "depth": {
+                "true": 3,
+                "false": 2
+              },
+              "status": {
+                "json": {
+                  "true": "success",
+                  "false": "success"
+                },
+                "http": {
+                  "true": 200,
+                  "false": 200
+                }
+              }
+            }
+          },
+          "contextInfo": {
+            "surfaceType": "api-param",
+            "injectionContext": "string"
+          },
+          "verificationStatus": "verified"
+        }
+      },
+      "remediation": "Use parameterized queries or prepared statements. Replace string concatenation with parameterized queries, use ORM frameworks with built-in SQL injection protection, validate and sanitize all user input, apply principle of least privilege to database accounts.",
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection",
+        "https://cwe.mitre.org/data/definitions/89.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ],
+      "timestamp": "2025-12-23T10:06:27.356Z",
+      "fingerprint": "89bd63343dd06ab663e963af0cb849dbf97b23b3a736a8359c33073c30e4ddc6",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "error-db-name-1766484531445",
+      "title": "Database Error Disclosure (Induced)",
+      "description": "Input 'name' triggers database error messages",
+      "severity": "medium",
+      "category": "information-disclosure",
+      "cwe": "CWE-209",
+      "owasp": "A06:2025",
+      "evidence": {
+        "payload": "\u0000",
+        "request": {
+          "body": "\u0000"
+        },
+        "response": {
+          "body": "{\"message\":\"internal error\",\"errors\":[\"SQLITE_ERROR: unrecognized token: \\\"'\\\"\"]}"
+        }
+      },
+      "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/209.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+      ],
+      "timestamp": "2025-12-23T10:08:51.445Z",
+      "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc",
+      "metadata": {
+        "occurrences": 3
+      },
+      "relatedFindings": [
+        {
+          "id": "error-db-name-1766484532772",
+          "title": "Database Error Disclosure (Induced)",
+          "description": "Input 'name' triggers database error messages",
+          "severity": "medium",
+          "category": "information-disclosure",
+          "cwe": "CWE-209",
+          "owasp": "A06:2025",
+          "evidence": {
+            "payload": "\u0000",
+            "request": {
+              "body": "\u0000"
+            },
+            "response": {
+              "body": "{\"message\":\"internal error\",\"errors\":[\"SQLITE_ERROR: unrecognized token: \\\"'\\\"\"]}"
+            }
+          },
+          "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+          "references": [
+            "https://cwe.mitre.org/data/definitions/209.html",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+          ],
+          "timestamp": "2025-12-23T10:08:52.772Z",
+          "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc"
+        },
+        {
+          "id": "error-db-q-1766484533919",
+          "title": "Database Error Disclosure (Induced)",
+          "description": "Input 'q' triggers database error messages",
+          "severity": "medium",
+          "category": "information-disclosure",
+          "cwe": "CWE-209",
+          "owasp": "A06:2025",
+          "evidence": {
+            "payload": "\u0000",
+            "request": {
+              "body": "\u0000"
+            },
+            "response": {
+              "body": "<html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error: SQLITE_ERROR: unrecognized token: &quot;&#39;%&quot;</title>\n    <style>* {\n  margin: 0;\n  padding: 0;\n  outline: 0;\n}\n\nbody {\n  padding: 80px 100px;\n  font: 13px \"Helvetica Neue\", \"Lucida Grande\", \"Arial\";\n  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));\n  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);\n  background-repeat: no-repeat;\n  color: #555;\n  -webkit-font-smoothing: antialiased;\n}\nh1, h2 {\n  font-size: 22px;\n  color: #343434;\n}\nh1 em, h2 em {\n  padding: 0 5px;\n  font-weight: normal;\n}\nh1 {\n  font-size: 60px;\n}\nh2 {\n  margin-top: 10px;\n}\nul li {\n  list-style: none;\n}\n#stacktrace {\n  margin-left: 60px;\n}\n</style>\n  </head>\n  <body>\n    <div id=\"wrapper\">\n      <h1>OWASP Juice Shop (Express ^4.21.0)</h1>\n      <h2><em>500</em> Error: SQLITE_ERROR: unrecognized token: &quot;&#39;%&quot;</h2>\n      <ul id=\"stacktrace\"></ul>\n    </div>\n  </body>\n</html>\n"
+            }
+          },
+          "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+          "references": [
+            "https://cwe.mitre.org/data/definitions/209.html",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+          ],
+          "timestamp": "2025-12-23T10:08:53.919Z",
+          "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "critical": 1,
+    "high": 0,
+    "medium": 1,
+    "low": 0,
+    "info": 0
+  },
+  "config": {
+    "target": {
+      "url": "http://localhost:3000",
+      "crawlDepth": 2,
+      "maxPages": 10,
+      "timeout": 30000,
+      "scope": {
+        "include": [
+          "http://localhost:3000/.*"
+        ],
+        "exclude": [
+          "http://localhost:3000/logout",
+          "http://localhost:3000/socket.io/.*"
+        ]
+      }
+    },
+    "scanners": {
+      "passive": {
+        "enabled": false
+      },
+      "active": {
+        "enabled": true,
+        "aggressiveness": "high",
+        "payloadSets": [
+          "xss"
+        ],
+        "maxInputsPerPage": 10,
+        "delayBetweenRequests": 0,
+        "skipReadOnlyInputs": true,
+        "submitForms": true,
+        "safeMode": false
+      }
+    },
+    "detectors": {
+      "enabled": [
+        "xss"
+      ],
+      "disabled": [],
+      "customRules": [],
+      "sensitivity": "normal",
+      "falsePositiveThreshold": 0.3,
+      "minConfidence": 0.5
+    },
+    "browser": {
+      "type": "chromium",
+      "headless": true,
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "ignoreHTTPSErrors": true
+    },
+    "reporting": {
+      "formats": [
+        "console",
+        "json"
+      ],
+      "outputDir": "test-security-reports",
+      "fileNameTemplate": "juiceshop-xss-debug-{{scanId}}",
+      "includeScreenshots": false,
+      "verbosity": "debug"
+    }
+  }
+}

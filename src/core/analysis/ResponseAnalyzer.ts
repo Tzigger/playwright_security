@@ -14,6 +14,7 @@
 import { EventEmitter } from 'events';
 import { Logger } from '../../utils/logger/Logger';
 import { LogLevel, VulnerabilitySeverity, VulnerabilityCategory } from '../../types/enums';
+import { normalizeUrlForMatching } from '../../utils/helpers/network-helpers';
 
 // Type alias for backwards compatibility
 type SeverityLevel = VulnerabilitySeverity;
@@ -564,12 +565,7 @@ export class ResponseAnalyzer extends EventEmitter {
    * Normalize URL for payload matching
    */
   private normalizeUrl(url: string): string {
-    try {
-      const parsed = new URL(url);
-      return `${parsed.origin}${parsed.pathname}`;
-    } catch {
-      return url;
-    }
+    return normalizeUrlForMatching(url);
   }
 
   /**

@@ -1,0 +1,1069 @@
+{
+  "scanId": "bf25cd59-4493-46af-9176-1798490cad18",
+  "targetUrl": "http://localhost:3000",
+  "status": "completed",
+  "startTime": 1766480571107,
+  "endTime": 1766483941009,
+  "duration": 3369902,
+  "vulnerabilities": [
+    {
+      "id": "bd23676a-0967-4c2a-9dd2-d7935ae52072",
+      "category": "security-misconfiguration",
+      "severity": "high",
+      "title": "Missing Security Header: Strict-Transport-Security",
+      "description": "HSTS header missing - connections may be downgraded to HTTP",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "accept-ranges": "bytes",
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=0",
+            "connection": "keep-alive",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=UTF-8",
+            "date": "Tue, 23 Dec 2025 09:02:51 GMT",
+            "etag": "W/\"1252f-19b4656a18d\"",
+            "feature-policy": "payment 'self'",
+            "keep-alive": "timeout=5",
+            "last-modified": "Mon, 22 Dec 2025 13:54:01 GMT",
+            "transfer-encoding": "chunked",
+            "vary": "Accept-Encoding",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-recruiting": "/#/jobs"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Strict-Transport-Security header"
+      },
+      "remediation": "Add Strict-Transport-Security header with: max-age=31536000; includeSubDomains; preload",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-319",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575665,
+      "fingerprint": "1ed63a322f0fd4a8d6871a13fd1aed3c8e5de5ad7108c97a93a9623ec020fc98",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "2b5a5f74-3204-4da9-9e41-803d800d1815",
+      "category": "security-misconfiguration",
+      "severity": "high",
+      "title": "Missing Security Header: Content-Security-Policy",
+      "description": "CSP header missing - vulnerable to XSS and injection attacks",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "accept-ranges": "bytes",
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=0",
+            "connection": "keep-alive",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=UTF-8",
+            "date": "Tue, 23 Dec 2025 09:02:51 GMT",
+            "etag": "W/\"1252f-19b4656a18d\"",
+            "feature-policy": "payment 'self'",
+            "keep-alive": "timeout=5",
+            "last-modified": "Mon, 22 Dec 2025 13:54:01 GMT",
+            "transfer-encoding": "chunked",
+            "vary": "Accept-Encoding",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-recruiting": "/#/jobs"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Content-Security-Policy header"
+      },
+      "remediation": "Implement Content-Security-Policy header to control resource loading. Start with: default-src 'self'",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-79",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575665,
+      "fingerprint": "6c4292c7e49c8cb6ba2752fbf1918ee950927985ddf71ac735d09435b3eff9c9",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "88c6c92a-f977-4f63-b677-0e7fe675daf5",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: X-Xss-Protection",
+      "description": "X-XSS-Protection header missing or misconfigured",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "accept-ranges": "bytes",
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=0",
+            "connection": "keep-alive",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=UTF-8",
+            "date": "Tue, 23 Dec 2025 09:02:51 GMT",
+            "etag": "W/\"1252f-19b4656a18d\"",
+            "feature-policy": "payment 'self'",
+            "keep-alive": "timeout=5",
+            "last-modified": "Mon, 22 Dec 2025 13:54:01 GMT",
+            "transfer-encoding": "chunked",
+            "vary": "Accept-Encoding",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-recruiting": "/#/jobs"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing X-Xss-Protection header"
+      },
+      "remediation": "Add X-XSS-Protection header with: 1; mode=block",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-79",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575665,
+      "fingerprint": "491737663904249124db738f15a89314c64a26ccc3e4f67241a48e1893b8dd98",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "41580fc9-53a4-4498-9936-816a086c97ca",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: Referrer-Policy",
+      "description": "Referrer-Policy header missing - may leak sensitive information in referrer",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "accept-ranges": "bytes",
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=0",
+            "connection": "keep-alive",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=UTF-8",
+            "date": "Tue, 23 Dec 2025 09:02:51 GMT",
+            "etag": "W/\"1252f-19b4656a18d\"",
+            "feature-policy": "payment 'self'",
+            "keep-alive": "timeout=5",
+            "last-modified": "Mon, 22 Dec 2025 13:54:01 GMT",
+            "transfer-encoding": "chunked",
+            "vary": "Accept-Encoding",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-recruiting": "/#/jobs"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Referrer-Policy header"
+      },
+      "remediation": "Add Referrer-Policy header with: strict-origin-when-cross-origin or no-referrer",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-200",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575665,
+      "fingerprint": "108c0b421294bccfdd0006057e060a67491eef0b8a0bd119132441c8b919f9e0",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "cb80e8a6-6437-428b-b882-73f2d1c8d18b",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: Permissions-Policy",
+      "description": "Permissions-Policy header missing - browser features not restricted",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "accept-ranges": "bytes",
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=0",
+            "connection": "keep-alive",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=UTF-8",
+            "date": "Tue, 23 Dec 2025 09:02:51 GMT",
+            "etag": "W/\"1252f-19b4656a18d\"",
+            "feature-policy": "payment 'self'",
+            "keep-alive": "timeout=5",
+            "last-modified": "Mon, 22 Dec 2025 13:54:01 GMT",
+            "transfer-encoding": "chunked",
+            "vary": "Accept-Encoding",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-recruiting": "/#/jobs"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Permissions-Policy header"
+      },
+      "remediation": "Add Permissions-Policy header to control browser features: geolocation=(), microphone=(), camera=()",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-16",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575665,
+      "fingerprint": "8f4bf933f3e8f59f485f141c0ec11965e7c5f69d4458edcd12f631350f478bcc",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "dbe60541-bb0c-4e2d-b170-29180138a797",
+      "title": "Cross-Domain Misconfiguration",
+      "description": "CORS allows requests from different origin: *",
+      "severity": "medium",
+      "category": "security-misconfiguration",
+      "cwe": "CWE-942",
+      "owasp": "A02:2025",
+      "url": "http://localhost:3000/",
+      "remediation": "Review and restrict CORS policy to trusted domains only",
+      "evidence": {
+        "description": "Cross-domain CORS policy detected",
+        "responseHeaders": {
+          "access-control-allow-origin": "*"
+        }
+      },
+      "confidence": 0.8,
+      "timestamp": 1766480575666,
+      "references": [
+        "https://cwe.mitre.org/data/definitions/942.html",
+        "https://owasp.org/Top10/A02_2025-Security_Misconfiguration/"
+      ],
+      "fingerprint": "8f899cc36edb5dc0bd3ea429db6c7c923d53bb053bec71c39ed5dc300ff8d492",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "718a6afd-8754-4e32-abd8-62a9eed09fec",
+      "title": "Cross-Domain JavaScript Source File Inclusion",
+      "description": "JavaScript loaded from external domain: cdnjs.cloudflare.com",
+      "severity": "low",
+      "category": "security-misconfiguration",
+      "cwe": "CWE-829",
+      "owasp": "A03:2025",
+      "url": "http://localhost:3000/",
+      "remediation": "Host JavaScript files locally or use Subresource Integrity (SRI) hashes for external scripts",
+      "evidence": {
+        "description": "External JavaScript source detected",
+        "metadata": {
+          "src": "//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js",
+          "domain": "cdnjs.cloudflare.com"
+        }
+      },
+      "confidence": 1,
+      "timestamp": 1766480575667,
+      "references": [
+        "https://cwe.mitre.org/data/definitions/829.html",
+        "https://owasp.org/Top10/A03_2025-Software_Supply_Chain_Failures/"
+      ],
+      "fingerprint": "a1fda4e40a04cc069d9f4236461d4551d959821aff0d5d099750b20fbacfdcf4",
+      "metadata": {
+        "occurrences": 2
+      },
+      "relatedFindings": [
+        {
+          "id": "944a0935-0728-4ed5-9965-6e3c7f94e98f",
+          "title": "Cross-Domain JavaScript Source File Inclusion",
+          "description": "JavaScript loaded from external domain: cdnjs.cloudflare.com",
+          "severity": "low",
+          "category": "security-misconfiguration",
+          "cwe": "CWE-829",
+          "owasp": "A03:2025",
+          "url": "http://localhost:3000/",
+          "remediation": "Host JavaScript files locally or use Subresource Integrity (SRI) hashes for external scripts",
+          "evidence": {
+            "description": "External JavaScript source detected",
+            "metadata": {
+              "src": "//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js",
+              "domain": "cdnjs.cloudflare.com"
+            }
+          },
+          "confidence": 1,
+          "timestamp": 1766480575667,
+          "references": [
+            "https://cwe.mitre.org/data/definitions/829.html",
+            "https://owasp.org/Top10/A03_2025-Software_Supply_Chain_Failures/"
+          ],
+          "fingerprint": "a1fda4e40a04cc069d9f4236461d4551d959821aff0d5d099750b20fbacfdcf4"
+        }
+      ]
+    },
+    {
+      "id": "af7d6808-91a3-4612-8ad2-a1a6db4a8856",
+      "title": "Vulnerable JS Library",
+      "description": "Outdated jquery version 2.2.4 detected with known vulnerabilities",
+      "severity": "medium",
+      "category": "security-misconfiguration",
+      "cwe": "CWE-829",
+      "owasp": "A03:2025",
+      "url": "http://localhost:3000/",
+      "remediation": "Update jquery to the latest stable version",
+      "evidence": {
+        "description": "Vulnerable JavaScript library detected",
+        "metadata": {
+          "library": "jquery",
+          "version": "2.2.4"
+        }
+      },
+      "confidence": 0.9,
+      "timestamp": 1766480575668,
+      "references": [
+        "https://cwe.mitre.org/data/definitions/829.html",
+        "https://owasp.org/Top10/A03_2025-Software_Supply_Chain_Failures/"
+      ],
+      "fingerprint": "f537c7ad0e1672a6b4d779e3c32c76b7cbe31809d8f9552b84a585912ea0c134",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "489e0c9c-0068-4989-a4f7-d246bcaf92c7",
+      "title": "Tech Detected - jQuery",
+      "description": "jQuery technology detected in application",
+      "severity": "info",
+      "category": "information-disclosure",
+      "cwe": "CWE-200",
+      "owasp": "A02:2025",
+      "url": "http://localhost:3000/",
+      "remediation": "Ensure all third-party libraries are updated to latest secure versions",
+      "evidence": {
+        "description": "Technology fingerprint detected",
+        "metadata": {
+          "technology": "jQuery"
+        }
+      },
+      "confidence": 0.9,
+      "timestamp": 1766480575669,
+      "references": [
+        "https://cwe.mitre.org/data/definitions/200.html",
+        "https://owasp.org/Top10/A02_2025-Security_Misconfiguration/"
+      ],
+      "fingerprint": "aa57d15416b596f0787a1977b5b1b64bde18f57dd4070dd18b579e97b29296aa",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "ab4b20e7-9d9c-4b97-8607-4f4afee4ba35",
+      "category": "security-misconfiguration",
+      "severity": "high",
+      "title": "Missing Security Header: Strict-Transport-Security",
+      "description": "HSTS header missing - connections may be downgraded to HTTP",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Strict-Transport-Security header"
+      },
+      "remediation": "Add Strict-Transport-Security header with: max-age=31536000; includeSubDomains; preload",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-319",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "6a204de9f4a6d00b220ec52e63c7a4817ba33dc4100a9f8650e065adaebd319d",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "888ebda0-3a7d-4a83-8f77-be428d427788",
+      "category": "security-misconfiguration",
+      "severity": "high",
+      "title": "Missing Security Header: Content-Security-Policy",
+      "description": "CSP header missing - vulnerable to XSS and injection attacks",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Content-Security-Policy header"
+      },
+      "remediation": "Implement Content-Security-Policy header to control resource loading. Start with: default-src 'self'",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-79",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "540212c1ad920400a611d0bb4138b6630c3fe6499baa6d77439a9a7995a679bb",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "a18b7e79-17a9-47a6-803e-49f3abd5c091",
+      "category": "security-misconfiguration",
+      "severity": "medium",
+      "title": "Missing Security Header: X-Frame-Options",
+      "description": "X-Frame-Options header missing - vulnerable to clickjacking attacks",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing X-Frame-Options header"
+      },
+      "remediation": "Add X-Frame-Options header with: DENY or SAMEORIGIN",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-1021",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "1fc9a305882f3cc12f6fa411e3ae220ca537ceb74691f275b70ce7a65755d492",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "a35b11ca-551e-452c-ba09-42e1e7b795f4",
+      "category": "security-misconfiguration",
+      "severity": "medium",
+      "title": "Missing Security Header: X-Content-Type-Options",
+      "description": "X-Content-Type-Options header missing - vulnerable to MIME type sniffing",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing X-Content-Type-Options header"
+      },
+      "remediation": "Add X-Content-Type-Options header with: nosniff",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-16",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "3899490de631f5c3f97415a3efc66ce6ac6ada3f74e93d7b673903c17e9d06b9",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "e20332e9-e892-42f2-8057-be97896fc827",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: X-Xss-Protection",
+      "description": "X-XSS-Protection header missing or misconfigured",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing X-Xss-Protection header"
+      },
+      "remediation": "Add X-XSS-Protection header with: 1; mode=block",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-79",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "744bee2f177c69b642de6e278a69954731b1cb68873dee23de1ba071d025af2c",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "2bac4081-4445-4aff-9b5c-bb30d6f4eb2c",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: Referrer-Policy",
+      "description": "Referrer-Policy header missing - may leak sensitive information in referrer",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Referrer-Policy header"
+      },
+      "remediation": "Add Referrer-Policy header with: strict-origin-when-cross-origin or no-referrer",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-200",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "d37d1aa30ecac23d2713eae850fd704ccf932832cba1fe6437e99762a7480474",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "d935140d-a01e-416e-adab-924e5819c97c",
+      "category": "security-misconfiguration",
+      "severity": "low",
+      "title": "Missing Security Header: Permissions-Policy",
+      "description": "Permissions-Policy header missing - browser features not restricted",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "response": {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "http://localhost:4200",
+            "content-length": "2",
+            "keep-alive": "timeout=5",
+            "date": "Tue, 23 Dec 2025 09:02:52 GMT",
+            "content-type": "text/html",
+            "vary": "Origin",
+            "connection": "keep-alive"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "Response missing Permissions-Policy header"
+      },
+      "remediation": "Add Permissions-Policy header to control browser features: geolocation=(), microphone=(), camera=()",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://securityheaders.com/"
+      ],
+      "cwe": "CWE-16",
+      "owasp": "A05:2021 - Security Misconfiguration",
+      "timestamp": 1766480575669,
+      "fingerprint": "625748a3a7f09920010eaaa21884723cea2009d5a505570db9af72965084b8c5",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "33fcf6c0-87fd-4006-b135-6a520ed08df1",
+      "category": "insecure-communication",
+      "severity": "info",
+      "title": "HTTP Transmission on Localhost",
+      "description": "Development/localhost traffic over HTTP to http://localhost:3000/ (informational only)",
+      "url": "http://localhost:3000/",
+      "evidence": {
+        "request": {
+          "method": "GET",
+          "url": "http://localhost:3000/",
+          "headers": {
+            "upgrade-insecure-requests": "1",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\""
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "GET request to localhost/127.0.0.1 over HTTP. This is acceptable for local development but should use HTTPS in production."
+      },
+      "remediation": "For production: Implement HTTPS across the entire application. Redirect all HTTP traffic to HTTPS. Use HSTS headers to enforce HTTPS.",
+      "references": [
+        "https://owasp.org/www-community/controls/SecureFlag",
+        "https://cwe.mitre.org/data/definitions/319.html"
+      ],
+      "cwe": "CWE-319",
+      "owasp": "A04:2025",
+      "timestamp": 1766480575714,
+      "fingerprint": "65fc84894285dbcc9199d6ac97f827fa68d86bb20de40926724c9b278d770b77",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "2930001a-7aa2-4826-a01c-610547fb1e8b",
+      "category": "insecure-communication",
+      "severity": "info",
+      "title": "HTTP Transmission on Localhost",
+      "description": "Development/localhost traffic over HTTP to http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE (informational only)",
+      "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+      "evidence": {
+        "request": {
+          "method": "POST",
+          "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling&t=PjASczm&sid=g-Y68zopddF8TAf1AAIE",
+          "headers": {
+            "sec-ch-ua-platform": "\"macOS\"",
+            "referer": "http://localhost:3000/",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36",
+            "accept": "*/*",
+            "sec-ch-ua": "\"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+            "content-type": "text/plain;charset=UTF-8",
+            "sec-ch-ua-mobile": "?0"
+          }
+        },
+        "source": "PassiveScanner",
+        "description": "POST request to localhost/127.0.0.1 over HTTP. This is acceptable for local development but should use HTTPS in production."
+      },
+      "remediation": "For production: Implement HTTPS across the entire application. Redirect all HTTP traffic to HTTPS. Use HSTS headers to enforce HTTPS.",
+      "references": [
+        "https://owasp.org/www-community/controls/SecureFlag",
+        "https://cwe.mitre.org/data/definitions/319.html"
+      ],
+      "cwe": "CWE-319",
+      "owasp": "A04:2025",
+      "timestamp": 1766480575715,
+      "fingerprint": "cc8b5cedbde6dcc5de273c888c5e46efdfc1d4f2a57f92285d56aa4688356474",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "sqli-boolean-based-q-1766480639624",
+      "title": "SQL Injection (boolean-based)",
+      "description": "Boolean-based blind SQL injection detected through differential responses in api-param 'q'",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-89",
+      "owasp": "A05:2025",
+      "confidence": 1.2,
+      "url": "http://localhost:3000/rest/products/search?q=",
+      "evidence": {
+        "payload": "' OR 'a'='a",
+        "request": {
+          "body": "' OR 'a'='a",
+          "url": "http://localhost:3000/rest/products/search?q=",
+          "method": "GET"
+        },
+        "response": {
+          "body": "{\"status\":\"success\",\"data\":[{\"id\":1,\"name\":\"Apple Juice (1000ml)\",\"description\":\"The all-time classic.\",\"price\":1.99,\"deluxePrice\":0.99,\"image\":\"apple_juice.jpg\",\"createdAt\":\"2025-12-22 13:53:59.982 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.982 +00:00\",\"deletedAt\":null},{\"id\":24,\"name\":\"Apple Pomace\",\"description\":\"Finest pressings of apples. Allergy disclaimer: Might contain traces of worms. Can be <a href=\\\"/#recycle\\\">sent back to us</a> for recycling.\",\"price\":0.89,\"deluxePrice\":0.89,\"image\":\"apple_pressings.jpg\",\"createdAt\":\"2025-12-22 13:53:59.989 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.989 +00:00\",\"deletedAt\":null},{\"id\":6,\"name\":\"Banana Juice (1000ml)\",\"description\":\"Monkeys love it the most.\",\"price\":1.99,\"deluxePrice\":1.99,\"image\":\"banana_juice.jpg\",\"createdAt\":\"2025-12-22 13:53:59.983 +00:00\",\"updatedAt\":\"2025-12-22 13:53:59.983 +00:00\",\"deletedAt\":null},{\"id\":42,\"name\":\"Best Juice Shop Salesman Artwork\",\"description\":\"Unique digital painting depicting Stan, our most qualifi",
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "feature-policy": "payment 'self'",
+            "x-recruiting": "/#/jobs",
+            "content-type": "application/json; charset=utf-8",
+            "etag": "W/\"354c-dTdMK7+I+OjWN941QSPqqz4h4u8\"",
+            "vary": "Accept-Encoding",
+            "content-encoding": "br",
+            "date": "Tue, 23 Dec 2025 09:03:54 GMT",
+            "connection": "keep-alive",
+            "keep-alive": "timeout=5",
+            "transfer-encoding": "chunked"
+          }
+        },
+        "metadata": {
+          "technique": "boolean-based",
+          "confidence": 1.2,
+          "jsonDiff": {
+            "isSignificant": true,
+            "confidence": 1.2,
+            "reason": "Structure differs at keys: data.0, data.1, data.2, data.3, data.4; Data array length differs: 36 vs 0; Total keys differ: 362 vs 2; Depth differs: 3 vs 2; Content length differs: 13639 vs 30",
+            "diff": {
+              "structureDiff": [
+                "data.0",
+                "data.1",
+                "data.2",
+                "data.3",
+                "data.4",
+                "data.5",
+                "data.6",
+                "data.7",
+                "data.8",
+                "data.9",
+                "data.10",
+                "data.11",
+                "data.12",
+                "data.13",
+                "data.14",
+                "data.15",
+                "data.16",
+                "data.17",
+                "data.18",
+                "data.19",
+                "data.20",
+                "data.21",
+                "data.22",
+                "data.23",
+                "data.24",
+                "data.25",
+                "data.26",
+                "data.27",
+                "data.28",
+                "data.29",
+                "data.30",
+                "data.31",
+                "data.32",
+                "data.33",
+                "data.34",
+                "data.35"
+              ],
+              "arrays": {
+                "true": 1,
+                "false": 1
+              },
+              "dataArray": {
+                "true": 36,
+                "false": 0
+              },
+              "keys": {
+                "true": 362,
+                "false": 2
+              },
+              "depth": {
+                "true": 3,
+                "false": 2
+              },
+              "status": {
+                "json": {
+                  "true": "success",
+                  "false": "success"
+                },
+                "http": {
+                  "true": 200,
+                  "false": 200
+                }
+              }
+            }
+          },
+          "timing": 21,
+          "responseComparison": {
+            "isSignificant": true,
+            "confidence": 1.2,
+            "reason": "Structure differs at keys: data.0, data.1, data.2, data.3, data.4; Data array length differs: 36 vs 0; Total keys differ: 362 vs 2; Depth differs: 3 vs 2; Content length differs: 13639 vs 30",
+            "diff": {
+              "structureDiff": [
+                "data.0",
+                "data.1",
+                "data.2",
+                "data.3",
+                "data.4",
+                "data.5",
+                "data.6",
+                "data.7",
+                "data.8",
+                "data.9",
+                "data.10",
+                "data.11",
+                "data.12",
+                "data.13",
+                "data.14",
+                "data.15",
+                "data.16",
+                "data.17",
+                "data.18",
+                "data.19",
+                "data.20",
+                "data.21",
+                "data.22",
+                "data.23",
+                "data.24",
+                "data.25",
+                "data.26",
+                "data.27",
+                "data.28",
+                "data.29",
+                "data.30",
+                "data.31",
+                "data.32",
+                "data.33",
+                "data.34",
+                "data.35"
+              ],
+              "arrays": {
+                "true": 1,
+                "false": 1
+              },
+              "dataArray": {
+                "true": 36,
+                "false": 0
+              },
+              "keys": {
+                "true": 362,
+                "false": 2
+              },
+              "depth": {
+                "true": 3,
+                "false": 2
+              },
+              "status": {
+                "json": {
+                  "true": "success",
+                  "false": "success"
+                },
+                "http": {
+                  "true": 200,
+                  "false": 200
+                }
+              }
+            }
+          },
+          "contextInfo": {
+            "surfaceType": "api-param",
+            "injectionContext": "string"
+          },
+          "verificationStatus": "verified"
+        }
+      },
+      "remediation": "Use parameterized queries or prepared statements. Replace string concatenation with parameterized queries, use ORM frameworks with built-in SQL injection protection, validate and sanitize all user input, apply principle of least privilege to database accounts.",
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection",
+        "https://cwe.mitre.org/data/definitions/89.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ],
+      "timestamp": "2025-12-23T09:03:59.624Z",
+      "fingerprint": "89bd63343dd06ab663e963af0cb849dbf97b23b3a736a8359c33073c30e4ddc6",
+      "metadata": {
+        "occurrences": 1
+      }
+    },
+    {
+      "id": "error-db-name-1766480821679",
+      "title": "Database Error Disclosure (Induced)",
+      "description": "Input 'name' triggers database error messages",
+      "severity": "medium",
+      "category": "information-disclosure",
+      "cwe": "CWE-209",
+      "owasp": "A06:2025",
+      "evidence": {
+        "payload": "\u0000",
+        "request": {
+          "body": "\u0000"
+        },
+        "response": {
+          "body": "{\"message\":\"internal error\",\"errors\":[\"SQLITE_ERROR: unrecognized token: \\\"'\\\"\"]}"
+        }
+      },
+      "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/209.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+      ],
+      "timestamp": "2025-12-23T09:07:01.679Z",
+      "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc",
+      "metadata": {
+        "occurrences": 3
+      },
+      "relatedFindings": [
+        {
+          "id": "error-db-name-1766480822861",
+          "title": "Database Error Disclosure (Induced)",
+          "description": "Input 'name' triggers database error messages",
+          "severity": "medium",
+          "category": "information-disclosure",
+          "cwe": "CWE-209",
+          "owasp": "A06:2025",
+          "evidence": {
+            "payload": "\u0000",
+            "request": {
+              "body": "\u0000"
+            },
+            "response": {
+              "body": "{\"message\":\"internal error\",\"errors\":[\"SQLITE_ERROR: unrecognized token: \\\"'\\\"\"]}"
+            }
+          },
+          "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+          "references": [
+            "https://cwe.mitre.org/data/definitions/209.html",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+          ],
+          "timestamp": "2025-12-23T09:07:02.861Z",
+          "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc"
+        },
+        {
+          "id": "error-db-q-1766480824005",
+          "title": "Database Error Disclosure (Induced)",
+          "description": "Input 'q' triggers database error messages",
+          "severity": "medium",
+          "category": "information-disclosure",
+          "cwe": "CWE-209",
+          "owasp": "A06:2025",
+          "evidence": {
+            "payload": "\u0000",
+            "request": {
+              "body": "\u0000"
+            },
+            "response": {
+              "body": "<html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error: SQLITE_ERROR: unrecognized token: &quot;&#39;%&quot;</title>\n    <style>* {\n  margin: 0;\n  padding: 0;\n  outline: 0;\n}\n\nbody {\n  padding: 80px 100px;\n  font: 13px \"Helvetica Neue\", \"Lucida Grande\", \"Arial\";\n  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));\n  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);\n  background-repeat: no-repeat;\n  color: #555;\n  -webkit-font-smoothing: antialiased;\n}\nh1, h2 {\n  font-size: 22px;\n  color: #343434;\n}\nh1 em, h2 em {\n  padding: 0 5px;\n  font-weight: normal;\n}\nh1 {\n  font-size: 60px;\n}\nh2 {\n  margin-top: 10px;\n}\nul li {\n  list-style: none;\n}\n#stacktrace {\n  margin-left: 60px;\n}\n</style>\n  </head>\n  <body>\n    <div id=\"wrapper\">\n      <h1>OWASP Juice Shop (Express ^4.21.0)</h1>\n      <h2><em>500</em> Error: SQLITE_ERROR: unrecognized token: &quot;&#39;%&quot;</h2>\n      <ul id=\"stacktrace\"></ul>\n    </div>\n  </body>\n</html>\n"
+            }
+          },
+          "remediation": "Implement generic error pages and disable detailed error messages in production. Remove or disable debug mode, implement custom error handlers.",
+          "references": [
+            "https://cwe.mitre.org/data/definitions/209.html",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html"
+          ],
+          "timestamp": "2025-12-23T09:07:04.005Z",
+          "fingerprint": "e57d736e0b83f3597f4dfd596b9f0dc910ca6be91fc739f16252b019479c46dc"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "critical": 1,
+    "high": 4,
+    "medium": 5,
+    "low": 7,
+    "info": 3
+  },
+  "config": {
+    "target": {
+      "url": "http://localhost:3000",
+      "crawlDepth": 3,
+      "maxPages": 50,
+      "timeout": 60000,
+      "scope": {
+        "include": [
+          "http://localhost:3000/.*"
+        ],
+        "exclude": [
+          "http://localhost:3000/logout",
+          "http://localhost:3000/socket.io/.*"
+        ]
+      }
+    },
+    "scanners": {
+      "passive": {
+        "enabled": true,
+        "interceptTypes": [
+          "xhr",
+          "fetch",
+          "document"
+        ],
+        "maxResponseSize": 10485760,
+        "skipStaticResources": true
+      },
+      "active": {
+        "enabled": true,
+        "aggressiveness": "high",
+        "payloadSets": [
+          "sql-injection",
+          "xss",
+          "command-injection",
+          "ssrf",
+          "path-traversal"
+        ],
+        "maxInputsPerPage": 100,
+        "delayBetweenRequests": 0,
+        "skipReadOnlyInputs": true,
+        "submitForms": true,
+        "safeMode": false
+      }
+    },
+    "detectors": {
+      "enabled": [
+        "sql-injection",
+        "xss",
+        "error-based",
+        "sensitive-data",
+        "header-security",
+        "cookie-security",
+        "insecure-transmission",
+        "ssrf",
+        "path-traversal",
+        "command-injection"
+      ],
+      "disabled": [],
+      "customRules": [],
+      "sensitivity": "normal",
+      "falsePositiveThreshold": 0.3,
+      "minConfidence": 0.5
+    },
+    "browser": {
+      "type": "chromium",
+      "headless": true,
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "ignoreHTTPSErrors": true
+    },
+    "reporting": {
+      "formats": [
+        "console",
+        "json",
+        "html"
+      ],
+      "outputDir": "test-security-reports",
+      "fileNameTemplate": "juiceshop-full-scan-{{scanId}}",
+      "includeScreenshots": false,
+      "verbosity": "normal"
+    }
+  }
+}

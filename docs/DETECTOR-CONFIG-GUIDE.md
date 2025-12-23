@@ -33,6 +33,9 @@ All detector configuration is done through the `detectors` section of your scan 
 | `sql-injection` | SQL Injection Detector | sql | Detects SQL injection vulnerabilities (error-based, boolean-based, time-based) |
 | `xss` | XSS Detector | xss | Detects cross-site scripting (reflected, stored, DOM-based, JSON-based) |
 | `error-based` | Error-Based Detector | errors | Detects information disclosure through error messages |
+| `ssrf` | SSRF Detector | ssrf | Detects server-side request forgery via URL fetch/redirect behavior and indicators |
+| `path-traversal` | Path Traversal Detector | traversal | Detects path traversal and local file inclusion style issues |
+| `command-injection` | Command Injection / SSTI / XXE Detector | cmdi | Detects OS command injection and other injection classes where supported |
 
 ### Passive Detectors (observe traffic only)
 
@@ -56,6 +59,8 @@ Matches all detectors:
   }
 }
 ```
+
+Note: `"*"` is powerful, but it may increase false positives on some apps. If you want stable defaults, prefer an explicit allowlist of detector IDs.
 
 ### Exact ID Matching
 Specify detector IDs exactly:

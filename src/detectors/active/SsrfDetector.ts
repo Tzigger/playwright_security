@@ -88,6 +88,7 @@ export class SsrfDetector implements IActiveDetector {
         owasp: 'A10:2025',
         url: result.response?.url || '',
         evidence: {
+            payload,
             request: { body: payload },
             response: { body: result.response?.body?.substring(0, 500) }
         },

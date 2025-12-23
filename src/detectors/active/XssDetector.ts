@@ -15,7 +15,7 @@ import {
   analyzeReflectionQuality,
   findReflectionPatterns,
   calculateReflectionConfidence,
-  EXECUTION_INDICATOR_PATTERNS,
+  findExecutionIndicators,
   ReflectionContext,
   EncodingType,
 } from '../../utils/patterns/xss-patterns';
@@ -319,7 +319,7 @@ export class XssDetector implements IActiveDetector {
     const order: XssType[] = [];
 
     if (surface.type === AttackSurfaceType.API_PARAM || surface.type === AttackSurfaceType.JSON_BODY) {
-      order.push(XssType.JSON_XSS, XssType.ANGULAR_TEMPLATE);
+      order.push(XssType.JSON_XSS, XssType.ANGULAR_TEMPLATE, XssType.DOM_BASED);
     }
 
     if (surface.type === AttackSurfaceType.URL_PARAMETER || surface.type === AttackSurfaceType.LINK) {
@@ -327,7 +327,7 @@ export class XssDetector implements IActiveDetector {
     }
 
     if (surface.type === AttackSurfaceType.FORM_INPUT) {
-      order.push(XssType.REFLECTED, XssType.ANGULAR_TEMPLATE, XssType.STORED);
+      order.push(XssType.REFLECTED, XssType.ANGULAR_TEMPLATE, XssType.STORED, XssType.DOM_BASED);
     }
 
     const allTechniques = [
@@ -533,10 +533,14 @@ export class XssDetector implements IActiveDetector {
       : 'none';
     const encodingLevel = this.config.checkEncoding ? detectEncodingLevel(body, payload) : 'none';
     const quality = analyzeReflectionQuality(body, payload);
-    const executionIndicators = EXECUTION_INDICATOR_PATTERNS.filter((pattern) => pattern.test(body)).map((p) => p.toString());
-    const confidence = calculateReflectionConfidence(quality, executionIndicators);
-    
     let isReflected = patterns.length > 0 || quality.exact || quality.encoded;
+
+    const matchedFragments = patterns.flatMap((p) => p.matches);
+    const executionIndicators = isReflected
+      ? findExecutionIndicators(matchedFragments.join('\n'))
+      : [];
+
+    const confidence = calculateReflectionConfidence(quality, executionIndicators);
     
     if (this.config.permissiveMode) {
         // Accept exact reflection or relaxed checking without strict execution contexts
@@ -861,6 +865,7 @@ export class XssDetector implements IActiveDetector {
       '<script>alert(1)</script>',
       '<img src=x onerror=alert(1)>',
       '<svg/onload=alert(1)>',
+      '<iframe src="javascript:alert(1)">',
       '{{constructor.constructor("alert(1)")()}}',  // Angular template in JSON
       '${alert(1)}',  // Template literal injection
       // Payloads that might bypass JSON encoding
@@ -924,6 +929,8 @@ export class XssDetector implements IActiveDetector {
 
   private async testDomBasedXss(page: Page, surface: AttackSurface, baseUrl: string): Promise<Vulnerability | null> {
     const domPayloads = [
+      '<script>alert("DOM-XSS")</script>',
+      '<img src=x onerror=alert("DOM-XSS")>',
       '#<script>alert("DOM-XSS")</script>',
       '#<img src=x onerror=alert("DOM-XSS")>',
       'javascript:alert("DOM-XSS")',
@@ -934,10 +941,15 @@ export class XssDetector implements IActiveDetector {
       if (this.hasTestedPayload(surface, payload)) continue;
 
       let consoleListener: ((msg: any) => void) | null = null;
+      let confirmedExecution = false;
 
       try {
         const dialogPromise = new Promise<boolean>((resolve) => {
           const listener = (dialog: any) => {
+            const msg = dialog.message();
+            if (msg === 'DOM-XSS') {
+                confirmedExecution = true;
+            }
             dialog.dismiss().catch(() => {});
             page.off('dialog', listener);
             resolve(true);
@@ -953,7 +965,7 @@ export class XssDetector implements IActiveDetector {
           const trimmedPayload = payload.trim();
           const isProtocolPayload = trimmedPayload.startsWith('javascript:') || trimmedPayload.startsWith('data:');
           const targetUrl = isProtocolPayload ? trimmedPayload : `${baseUrl}${payload}`;
-          await page.goto(targetUrl);
+          await page.goto(targetUrl).catch(() => {});
         } else {
           await this.injector.inject(page, surface, payload, {
             encoding: PayloadEncoding.NONE,
@@ -963,7 +975,14 @@ export class XssDetector implements IActiveDetector {
         }
 
         const dialogDetected = await dialogPromise;
-        const domContent = await page.content();
+        
+        let domContent = '';
+        try {
+            await page.waitForLoadState('domcontentloaded', { timeout: 2000 }).catch(() => {});
+            domContent = await page.content();
+        } catch (e) {
+            this.logger.debug(`Could not retrieve content during DOM XSS check: ${e}`);
+        }
         const consoleErrors: string[] = [];
         consoleListener = (msg: any) => {
           if (msg.type() === 'error') {
@@ -978,7 +997,7 @@ export class XssDetector implements IActiveDetector {
           strategy: 0 as any,
           surface,
           response: {
-            url: `${baseUrl}${payload}`,
+            url: page.url(),
             status: 200,
             body: domContent,
             headers: {},
@@ -990,12 +1009,10 @@ export class XssDetector implements IActiveDetector {
 
         this.markPayloadTested(surface, payload);
 
-        const payloadLinked =
-          reflectionAnalysis.reflected ||
-          domContent.includes(payload) ||
-          (domResult.response?.url ? domResult.response.url.includes(payload) : false);
+        const payloadLinked = reflectionAnalysis.reflected || domContent.includes(payload);
 
         if (
+          confirmedExecution ||
           dialogDetected ||
           (payloadLinked && (reflectionAnalysis.executionIndicators.length > 0 || consoleErrors.length > 0))
         ) {
@@ -1151,6 +1168,7 @@ export class XssDetector implements IActiveDetector {
       confidence, // Add confidence at top level
       url: result.response?.url || baseUrl,
       evidence: {
+        payload,
         request: {
           body: payload,
           url: result.response?.url || baseUrl,

@@ -97,7 +97,17 @@ program
             logLevel: LogLevel.INFO,
           },
           detectors: {
-            enabled: ['*'], // Default: enable all
+            // Keep defaults stable: only enable detectors that are enabled-by-default.
+            // Optional detectors (e.g., ssrf/path-traversal/command-injection) must be enabled explicitly.
+            enabled: [
+              'sql-injection',
+              'xss',
+              'error-based',
+              'sensitive-data',
+              'header-security',
+              'cookie-security',
+              'insecure-transmission',
+            ],
             disabled: [],
             tuning: {}
           }

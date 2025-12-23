@@ -16,6 +16,7 @@ import { ConsoleReporter } from '../../reporters/ConsoleReporter';
 import { JsonReporter } from '../../reporters/JsonReporter';
 import { HtmlReporter } from '../../reporters/HtmlReporter';
 import { SarifReporter } from '../../reporters/SarifReporter';
+import { vulnerabilityFingerprint } from '../../utils/helpers/vulnerability-fingerprint';
 
 /**
  * ScanEngine - Orchestrator principal pentru scanări DAST
@@ -28,6 +29,7 @@ export class ScanEngine extends EventEmitter {
   private targetValidator: TargetValidator;
   private scanners: Map<ScannerType, IScanner> = new Map();
   private vulnerabilities: Vulnerability[] = [];
+  private vulnerabilitiesByFingerprint: Map<string, Vulnerability> = new Map();
   private scanId: string | null = null;
   private scanStatus: ScanStatus = ScanStatus.PENDING;
   private startTime: number = 0;
@@ -140,6 +142,7 @@ export class ScanEngine extends EventEmitter {
     this.scanStatus = ScanStatus.RUNNING;
     this.startTime = Date.now();
     this.vulnerabilities = [];
+    this.vulnerabilitiesByFingerprint = new Map();
 
     this.emit('scanStarted', { scanId: this.scanId, config });
 
@@ -270,13 +273,47 @@ export class ScanEngine extends EventEmitter {
    * Handler pentru vulnerabilități detectate
    */
   private handleVulnerability(vulnerability: Vulnerability): void {
-    this.vulnerabilities.push(vulnerability);
-    this.logger.info(
-      `Vulnerability detected: [${vulnerability.severity}] ${vulnerability.title}`
-    );
-    this.emit('vulnerabilityDetected', vulnerability);
-    // Fan-out to reporters
-    void Promise.all(this.reporters.map((r) => r.onVulnerability(vulnerability)));
+    const fp = vulnerabilityFingerprint(vulnerability);
+    vulnerability.fingerprint = fp;
+    const existing = this.vulnerabilitiesByFingerprint.get(fp);
+
+    if (!existing) {
+      vulnerability.metadata = {
+        ...vulnerability.metadata,
+        occurrences: (vulnerability.metadata?.occurrences ?? 0) + 1,
+      };
+
+      this.vulnerabilitiesByFingerprint.set(fp, vulnerability);
+      this.vulnerabilities.push(vulnerability);
+      this.logger.info(`Vulnerability detected: [${vulnerability.severity}] ${vulnerability.title}`);
+      this.emit('vulnerabilityDetected', vulnerability);
+      // Fan-out to reporters
+      void Promise.all(this.reporters.map((r) => r.onVulnerability(vulnerability)));
+      return;
+    }
+
+    // Merge duplicate finding into existing record
+    if (!existing.relatedFindings) {
+      existing.relatedFindings = [];
+    }
+    existing.relatedFindings.push(vulnerability);
+
+    existing.metadata = {
+      ...existing.metadata,
+      occurrences: (existing.metadata?.occurrences ?? 1) + 1,
+    };
+
+    if ((vulnerability.confidence ?? 0) > (existing.confidence ?? 0)) {
+      existing.confidence = vulnerability.confidence;
+    }
+
+    if (!existing.evidence?.payloadUsed && vulnerability.evidence?.payloadUsed) {
+      existing.evidence.payloadUsed = vulnerability.evidence.payloadUsed;
+    } else if (!existing.evidence?.payload && vulnerability.evidence?.payload) {
+      existing.evidence.payload = vulnerability.evidence.payload;
+    }
+
+    this.logger.debug(`Deduped vulnerability: ${vulnerability.title} (occurrences=${existing.metadata.occurrences})`);
   }
 
   /**
@@ -336,6 +373,7 @@ export class ScanEngine extends EventEmitter {
       this.scanners.clear();
       this.reporters = [];
       this.vulnerabilities = [];
+      this.vulnerabilitiesByFingerprint.clear();
       this.scanId = null;
       this.scanStatus = ScanStatus.PENDING;
     } catch (error) {
