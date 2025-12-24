@@ -231,14 +231,103 @@ export class DomExplorer {
     return [...new Set(routes)]; // Deduplicate
   }
 
+  public async extractEndpointsFromJS(page: Page): Promise<string[]> {
+    this.logger.info('Analyzing JavaScript files for hidden endpoints...');
+    
+    const scriptUrls = await page.evaluate(() => 
+      Array.from(document.querySelectorAll('script[src]'))
+        .map((s: any) => s.src)
+        .filter(src => src.startsWith(location.origin))
+    );
+
+    const discoveredEndpoints = new Set<string>();
+    const endpointRegex = /["'](\/(?:api|rest|v1|graphql|admin)\/[a-zA-Z0-9\/_\-\.\?&=]+)["']/g;
+
+    for (const scriptUrl of scriptUrls) {
+      try {
+        const response = await page.request.get(scriptUrl);
+        if (response.ok()) {
+          const content = await response.text();
+          let match;
+          while ((match = endpointRegex.exec(content)) !== null) {
+            const capturedPath = match[1];
+            
+            if (capturedPath && 
+                !capturedPath.endsWith('.png') && 
+                !capturedPath.endsWith('.jpg') && 
+                !capturedPath.includes('node_modules')) {
+                discoveredEndpoints.add(capturedPath);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    const results = Array.from(discoveredEndpoints);
+    if (results.length > 0) {
+        this.logger.info(`Discovered ${results.length} hidden endpoints in JS files`);
+    }
+    return results;
+  }
+
+  public async prepareForms(page: Page): Promise<void> {
+      try {
+          const inputs = await page.$$('input:visible, textarea:visible, select:visible');
+          
+          for (const input of inputs) {
+              const value = await input.inputValue().catch(() => '');
+              if (value) continue;
+
+              const type = await input.getAttribute('type').catch(() => 'text');
+              const name = (await input.getAttribute('name') || '').toLowerCase();
+              const tagName = await input.evaluate(el => el.tagName.toLowerCase());
+
+              if (tagName === 'select') {
+                  await input.evaluate((el: any) => {
+                      if (el.options.length > 1) {
+                          el.selectedIndex = 1; // Choose second option (often first is "Select...")
+                          el.dispatchEvent(new Event('change', { bubbles: true }));
+                      } else if (el.options.length > 0) {
+                          el.selectedIndex = 0;
+                          el.dispatchEvent(new Event('change', { bubbles: true }));
+                      }
+                  });
+                  continue;
+              }
+
+              if (type === 'email' || name.includes('email')) {
+                  await input.fill('admin@juice-sh.op');
+              } else if (type === 'password' || name.includes('password')) {
+                  await input.fill('Password123!');
+              } else if (type === 'number' || name.includes('zip') || name.includes('age') || name.includes('year')) {
+                  await input.fill('12345');
+              } else if (name.includes('search') || name.includes('query')) {
+                  await input.fill('test');
+              } else if (name.includes('date')) {
+                  await input.fill('2023-01-01');
+              } else if (name.includes('url') || type === 'url') {
+                  await input.fill('http://example.com');
+              } else {
+                  await input.fill('test_data');
+              }
+          }
+      } catch (e) {
+          this.logger.debug(`Form preparation partial error: ${e}`);
+      }
+  }
+
+
+
   /**
    * Explorează pagina pentru toate suprafețele de atac
    */
   public async explore(page: Page, collectedRequests: Request[] = []): Promise<AttackSurface[]> {
     this.logger.info('Starting DOM exploration');
     const surfaces: AttackSurface[] = [];
-
+    
     try {
+      await this.prepareForms(page);
+
       // 1. Descoperă input-uri din formulare
       const formSurfaces = await this.discoverFormInputs(page);
       surfaces.push(...formSurfaces);
@@ -276,7 +365,28 @@ export class DomExplorer {
         this.dynamicApiSurfaces.forEach(s => this.logger.debug(`  - ${s.type}: ${s.name} (dynamic)`));
       }
 
-      // 6. Descoperă elemente clickabile (pentru SPA crawling)
+      // 6. Static JS Analysis (Deep Discovery)
+      const jsEndpoints = await this.extractEndpointsFromJS(page);
+      for (const endpoint of jsEndpoints) {
+          let fullUrl = endpoint;
+          if (endpoint.startsWith('/')) {
+              fullUrl = new URL(endpoint, page.url()).toString();
+          }
+          
+          surfaces.push({
+              id: `js-endpoint-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              type: AttackSurfaceType.LINK,
+              name: 'js-discovered-endpoint',
+              value: fullUrl,
+              context: InjectionContext.URL,
+              metadata: { source: 'static-js-analysis' }
+          });
+      }
+      if (jsEndpoints.length > 0) {
+          this.logger.debug(`[DomExplorer] JS endpoints added as links: ${jsEndpoints.length}`);
+      }
+
+      // 7. Descoperă elemente clickabile (pentru SPA crawling)
       const clickables = await this.discoverClickables(page);
       surfaces.push(...clickables);
       this.logger.debug(`[DomExplorer] Clickable elements discovered: ${clickables.length}`);
@@ -453,7 +563,7 @@ export class DomExplorer {
         // Ignorăm erorile de parsing pentru cereri individuale
       }
     }
-
+    
     this.logger.debug(`Discovered ${surfaces.length} API attack surfaces`);
     return surfaces;
   }
@@ -917,4 +1027,7 @@ export class DomExplorer {
         s.type === AttackSurfaceType.URL_PARAMETER
     );
   }
+
+
+
 }
