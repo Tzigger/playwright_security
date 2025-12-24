@@ -26,9 +26,30 @@ export class SessionManager {
       await page.goto(this.loginUrl, { waitUntil: 'domcontentloaded' });
       
       // Heuristic: Find username/password fields
-      const userSelectors = ['input[type="email"]', 'input[name="email"]', 'input[name="user"]', 'input[name="username"]', '#email'];
-      const passSelectors = ['input[type="password"]', 'input[name="password"]', '#password'];
-      const submitSelectors = ['button[type="submit"]', '#loginButton', 'button:has-text("Log in")', 'button:has-text("Login")'];
+      const userSelectors = [
+        'input[type="email"]', 
+        'input[name="email"]', 
+        'input[name="user"]', 
+        'input[name="username"]', 
+        'input[name="login"]', // bWAPP support
+        '#email', 
+        '#user', 
+        '#username',
+        '#login' // bWAPP support
+      ];
+      const passSelectors = [
+        'input[type="password"]', 
+        'input[name="password"]', 
+        '#password'
+      ];
+      const submitSelectors = [
+        'button[type="submit"]', 
+        'input[type="submit"]', // Support input submit buttons
+        '#loginButton', 
+        'button:has-text("Log in")', 
+        'button:has-text("Login")',
+        'button[name="form"]' // bWAPP support
+      ];
 
       let userField, passField, submitBtn;
 

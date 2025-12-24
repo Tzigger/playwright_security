@@ -6,35 +6,35 @@ import { LogLevel, ScanStatus, VulnerabilitySeverity, ScannerType } from '../../
 import { DomExplorer, AttackSurfaceType } from './DomExplorer';
 import { Request } from 'playwright';
 import { VerificationEngine } from '../../core/verification/VerificationEngine';
-import { TimeoutManager } from '../../core/timeout/TimeoutManager';
-import { SPAWaitStrategy } from '../../core/timeout/SPAWaitStrategy';
+import { TimeoutManager, getGlobalTimeoutManager } from '../../core/timeout/TimeoutManager';
+import { SPAWaitStrategy, getGlobalSPAWaitStrategy } from '../../core/timeout/SPAWaitStrategy';
 import { OperationType } from '../../types/timeout';
-import { SessionManager } from '../../core/auth/SessionManager'; // Ensure you created this file from Phase 2
+import { SessionManager } from '../../core/auth/SessionManager';
 
 /**
- * Configurare ActiveScanner
+ * Configuration for ActiveScanner
  */
 export interface ActiveScannerConfig {
-  maxDepth?: number;              // Adâncime maximă pentru crawling
-  maxPages?: number;              // Număr maxim de pagini de scanat
-  delayBetweenRequests?: number;  // Delay între request-uri (ms)
-  followRedirects?: boolean;      // Urmărește redirect-urile
-  respectRobotsTxt?: boolean;     // Respectă robots.txt
-  userAgent?: string;             // User agent custom
-  skipStaticResources?: boolean;  // Skip imagini, CSS, JS
-  aggressiveness?: 'low' | 'medium' | 'high'; // Nivel de agresivitate
+  maxDepth?: number;              // Maximum crawl depth
+  maxPages?: number;              // Maximum pages to scan
+  delayBetweenRequests?: number;  // Delay between requests (ms)
+  followRedirects?: boolean;      // Follow redirects
+  respectRobotsTxt?: boolean;     // Respect robots.txt
+  userAgent?: string;             // Custom user agent
+  skipStaticResources?: boolean;  // Skip images, CSS, JS
+  aggressiveness?: 'low' | 'medium' | 'high'; // Aggressiveness level
   safeMode?: boolean;             // Explicit safe mode override
 }
 
 /**
- * ActiveScanner - Scanner activ care injectează payload-uri pentru detectarea vulnerabilităților
+ * ActiveScanner - Active scanner that injects payloads to detect vulnerabilities
  * 
  * Features v0.2+:
  * - Smart Timeout Management (Anti-Hang)
  * - SPA Wait Strategy (Angular/React support)
  * - Active Verification (False Positive Reduction)
  * - Session Management (Auto-Login)
- * - Deep API Discovery (JS Analysis)
+ * - Deep API Discovery (JS/Swagger Analysis)
  */
 export class ActiveScanner extends BaseScanner {
   public readonly id = 'active-scanner';
@@ -56,7 +56,6 @@ export class ActiveScanner extends BaseScanner {
   constructor(config: ActiveScannerConfig = {}) {
     super();
     // PERFORMANCE FIX: Reduce default delay from 500ms to 100ms
-    // Concurrency is now handled at the injection level
     this.config = {
       maxDepth: config.maxDepth || 3,
       maxPages: config.maxPages || 20,
@@ -69,43 +68,34 @@ export class ActiveScanner extends BaseScanner {
     };
 
     this.domExplorer = new DomExplorer(LogLevel.INFO);
-    this.verificationEngine = new VerificationEngine();
-    this.timeoutManager = new TimeoutManager();
-    this.spaWaitStrategy = new SPAWaitStrategy();
+    // Use Singleton instances to ensure shared state across the application
+    this.verificationEngine = VerificationEngine.getInstance(); 
+    this.timeoutManager = getGlobalTimeoutManager(); 
+    this.spaWaitStrategy = getGlobalSPAWaitStrategy(); 
     this.sessionManager = new SessionManager(LogLevel.INFO);
   }
 
-  /**
-   * Înregistrează un detector activ
-   */
   public registerDetector(detector: IActiveDetector): void {
     this.detectors.set(detector.name, detector);
     this.context?.logger.info(`Registered active detector: ${detector.name}`);
   }
 
-  /**
-   * Înregistrează multiple detectori
-   */
   public registerDetectors(detectors: IActiveDetector[]): void {
     detectors.forEach((detector) => this.registerDetector(detector));
   }
 
-  /**
-   * Initialize hook
-   */
   protected override async onInitialize(): Promise<void> {
     const context = this.getContext();
     context.logger.info('Initializing ActiveScanner');
     
-    // Clear state
     this.visitedUrls.clear();
     this.crawlQueue = [];
 
-    // Configure Session Manager from Context
+    // Configure Session Manager from Config
     const authConfig = context.config.target.authentication;
     if (authConfig?.credentials && authConfig.credentials.username) {
         this.sessionManager.configure(
-            authConfig.loginPage?.url || context.config.target.url + '/login', // Heuristic default
+            authConfig.loginPage?.url || context.config.target.url + '/login',
             authConfig.credentials.username,
             authConfig.credentials.password || ''
         );
@@ -119,9 +109,8 @@ export class ActiveScanner extends BaseScanner {
         this.timeoutManager.usePreset('default');
     }
 
-    // Validate detectors
+    // Validate detectors and apply tuning
     for (const [name, detector] of this.detectors) {
-      // Apply configuration if available
       const tuning = context.config.detectors?.tuning;
       const sqliTuning = tuning?.['sqli'];
       if (sqliTuning && name === 'SqlInjectionDetector') {
@@ -142,14 +131,10 @@ export class ActiveScanner extends BaseScanner {
     context.logger.info('ActiveScanner initialized successfully');
   }
 
-  /**
-   * Execute scan
-   */
   public async execute(): Promise<ScanResult> {
     const context = this.getContext();
     const { page, config } = context;
     
-    // In SPA mode, use current page URL as starting point; otherwise use config target URL
     const currentUrl = page.url();
     const targetUrl = currentUrl && currentUrl !== 'about:blank' ? currentUrl : config.target.url;
 
@@ -157,17 +142,22 @@ export class ActiveScanner extends BaseScanner {
     const allVulnerabilities: Vulnerability[] = [];
     
     // 1. Attempt Auto-Login if configured
-    // This allows "Blackbox" scanning without manual cookie extraction
-    await this.sessionManager.performAutoLogin(page);
+    const loginSuccess = await this.sessionManager.performAutoLogin(page);
+    if (loginSuccess) {
+        const postLoginUrl = page.url();
+        // If redirected to a new page (e.g. dashboard), add it to queue
+        if (postLoginUrl !== targetUrl && this.isValidUrl(postLoginUrl, targetUrl)) {
+            context.logger.info(`Auto-login successful. Redirected to ${postLoginUrl}. Adding to crawl queue.`);
+            this.crawlQueue.push(postLoginUrl);
+        }
+    }
 
-    // Add target to crawl queue
     this.crawlQueue.push(targetUrl);
     
-    const clickedElements = new Set<string>(); // Track clicked elements to avoid loops
+    const clickedElements = new Set<string>();
     let depth = 0;
     
     while (this.crawlQueue.length > 0 && depth < this.config.maxDepth!) {
-      // Process queue in small batches
       const batchSize = 1; 
       const batch = this.crawlQueue.splice(0, batchSize);
       
@@ -177,11 +167,10 @@ export class ActiveScanner extends BaseScanner {
         context.logger.info(`Scanning page [${this.visitedUrls.size + 1}/${this.config.maxPages}]: ${url}`);
         this.visitedUrls.add(url);
 
-        // Start Passive-to-Active Monitoring
+        // Start Network Monitoring
         this.domExplorer.clearDynamicSurfaces();
         this.domExplorer.startMonitoring(page);
 
-        // Capture requests
         const capturedRequests: Request[] = [];
         const requestListener = (request: Request) => {
           if (['xhr', 'fetch', 'document'].includes(request.resourceType())) {
@@ -197,13 +186,8 @@ export class ActiveScanner extends BaseScanner {
         if (needsNavigation) {
           try {
             const timeout = this.timeoutManager.getTimeout(OperationType.NAVIGATION);
-            
-            // Execute navigation with timeout protection
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
-            
-            // Use SPA Wait Strategy for intelligent waiting (Angular/React/Vue)
             await this.spaWaitStrategy.waitForStability(page, timeout, 'navigation');
-            
           } catch (error) {
             context.logger.warn(`Failed to navigate to ${url}: ${error}`);
             page.off('request', requestListener);
@@ -214,16 +198,13 @@ export class ActiveScanner extends BaseScanner {
           context.logger.info('Already on target page, skipping navigation (SPA mode)');
         }
 
-        // --- DEEP API DISCOVERY (New Feature) ---
-        // Scan loaded JS files for hidden API endpoints (e.g. /rest/admin/application-configuration)
+        // --- DEEP API DISCOVERY (JS Analysis) ---
         try {
             const jsEndpoints = await this.domExplorer.extractEndpointsFromJS(page);
             for (const endpoint of jsEndpoints) {
                 try {
                     const fullApiUrl = new URL(endpoint, url).toString();
                     if (!this.visitedUrls.has(fullApiUrl) && this.isValidUrl(fullApiUrl, targetUrl)) {
-                        // Treat endpoints as visitable URLs to see if they reflect input or are accessible
-                        // Ideally we'd probe them directly, but adding to queue is a good "Blackbox" approach
                         if (!this.crawlQueue.includes(fullApiUrl)) {
                             this.crawlQueue.push(fullApiUrl);
                             context.logger.debug(`Added hidden JS endpoint to queue: ${endpoint}`);
@@ -238,11 +219,9 @@ export class ActiveScanner extends BaseScanner {
         page.off('request', requestListener);
         this.domExplorer.stopMonitoring(page);
 
-        // Detect SPA framework and handle hash routes
+        // Detect SPA & Hash Routes
         await this.domExplorer.detectSPAFramework(page);
         const hashRoutes = await this.domExplorer.extractHashRoutes(page);
-        
-        // Add hash routes to crawl queue
         if (hashRoutes.length > 0) {
           context.logger.info(`Found ${hashRoutes.length} hash routes`);
           const baseUrl = page.url().split('#')[0];
@@ -254,24 +233,44 @@ export class ActiveScanner extends BaseScanner {
           });
         }
 
-        // Discover attack surfaces
-        let allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+        // Discover DOM Surfaces
+        let domSurfaces = await this.domExplorer.explore(page, capturedRequests);
         
-        // Retry logic for slow SPAs using updated Wait Strategy
-        if (allSurfaces.length === 0) {
+        // Retry logic for slow SPAs
+        if (domSurfaces.length === 0) {
             context.logger.info('No surfaces found initially, waiting for potential SPA hydration...');
             await this.spaWaitStrategy.waitForStability(page, 3000, 'navigation');
-            allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+            domSurfaces = await this.domExplorer.explore(page, capturedRequests);
             
-            if (allSurfaces.length === 0) {
+            if (domSurfaces.length === 0) {
                  await this.spaWaitStrategy.waitForStability(page, 2000, 'navigation');
-                 allSurfaces = await this.domExplorer.explore(page, capturedRequests);
+                 domSurfaces = await this.domExplorer.explore(page, capturedRequests);
             }
         }
+
+        let allSurfaces = [...domSurfaces];
+
+        // --- SWAGGER DISCOVERY ---
+        try {
+            const swaggerSurfaces = await this.domExplorer.discoverSwaggerEndpoints(page);
+            if (swaggerSurfaces.length > 0) {
+                context.logger.info(`Merging ${swaggerSurfaces.length} Swagger endpoints into attack surfaces`);
+                allSurfaces = [...allSurfaces, ...swaggerSurfaces];
+            }
+        } catch (e) {
+            context.logger.warn(`Swagger discovery failed: ${e}`);
+        }
         
-        // Filter surfaces for testing
         const attackSurfaces = allSurfaces.filter(s => 
-          [AttackSurfaceType.FORM_INPUT, AttackSurfaceType.URL_PARAMETER, AttackSurfaceType.COOKIE, AttackSurfaceType.API_PARAM, AttackSurfaceType.JSON_BODY, AttackSurfaceType.BUTTON].includes(s.type)
+          [
+            AttackSurfaceType.FORM_INPUT, 
+            AttackSurfaceType.URL_PARAMETER, 
+            AttackSurfaceType.COOKIE, 
+            AttackSurfaceType.API_PARAM, 
+            AttackSurfaceType.JSON_BODY, 
+            AttackSurfaceType.BUTTON,
+            AttackSurfaceType.API_ENDPOINT
+          ].includes(s.type)
         );
         
         context.logger.info(`Found ${attackSurfaces.length} supported attack surfaces on ${url}`);
@@ -283,17 +282,12 @@ export class ActiveScanner extends BaseScanner {
 
         for (const clickable of clickables) {
           if (clickCount >= MAX_CLICKS_PER_PAGE) break;
-          
           const clickId = `${url}-${clickable.name}-${clickable.metadata['text']}`;
           if (clickedElements.has(clickId)) continue;
           
           if (clickable.element) {
             try {
               context.logger.debug(`Clicking element: ${clickable.name}`);
-              
-              // New: Smart Form Preparation is handled inside DomExplorer.explore(),
-              // so the fields should be pre-filled with dummy data, making the button active.
-
               clickedElements.add(clickId);
               clickCount++;
               
@@ -302,8 +296,6 @@ export class ActiveScanner extends BaseScanner {
               page.on('request', clickListener);
 
               await clickable.element.click({ timeout: 1000 }).catch(() => {});
-              
-              // Use SPA Wait Strategy instead of simple network idle
               await this.spaWaitStrategy.waitForStability(page, 2000, 'api');
               
               page.off('request', clickListener);
@@ -334,10 +326,7 @@ export class ActiveScanner extends BaseScanner {
         }
 
         // --- 2. RUN ACTIVE DETECTORS ---
-        // Only run on data surfaces (not buttons)
         const testableSurfaces = attackSurfaces.filter(s => s.type !== AttackSurfaceType.BUTTON);
-
-        // Determine safe mode status
         const safeMode = this.config.safeMode ?? config.scanners.active?.safeMode ?? false;
         
         for (const [name, detector] of this.detectors) {
@@ -351,17 +340,22 @@ export class ActiveScanner extends BaseScanner {
               const verifiedVulns: Vulnerability[] = [];
               for (const vuln of vulns) {
                 // VERIFICATION ENGINE: Double-check results
-                const isVerified = await this.verificationEngine.verify(page, vuln);
+                // Fix: Pass 3 arguments (page, vuln, config) matching the new signature
+                const result = await this.verificationEngine.verify(page, vuln, {
+                    attemptTimeout: this.timeoutManager.getTimeout(OperationType.VERIFICATION)
+                });
 
-                if (isVerified) {
+                if (result.shouldReport) {
+                  vuln.confidence = result.confidence;
                   vuln.confirmed = true;
                   if (!vuln.evidence.metadata) vuln.evidence.metadata = {};
-                  (vuln.evidence.metadata as any).verificationStatus = 'confirmed';
+                  (vuln.evidence.metadata as any).verificationStatus = result.status;
+                  (vuln.evidence.metadata as any).verificationReason = result.reason;
                   
-                  context.logger.info(`[CONFIRMED] ${vuln.title}`);
+                  context.logger.info(`[CONFIRMED] ${vuln.title} (Conf: ${result.confidence.toFixed(2)})`);
                   verifiedVulns.push(vuln);
                 } else {
-                  context.logger.info(`[FALSE POSITIVE] Discarded ${vuln.title}`);
+                  context.logger.info(`[FALSE POSITIVE] Discarded ${vuln.title}: ${result.reason}`);
                 }
               }
 
@@ -374,7 +368,6 @@ export class ActiveScanner extends BaseScanner {
             // ROBUSTNESS: Handle browser closed error gracefully
             if (error.message && (error.message.includes('closed') || error.message.includes('destroyed'))) {
                 context.logger.error(`Browser context closed unexpectedly during ${name}. Attempting to recover next page...`);
-                // Break inner loop to skip other detectors on this dead page
                 break; 
             }
             context.logger.error(`Detector ${name} failed: ${error}`);
@@ -442,9 +435,6 @@ export class ActiveScanner extends BaseScanner {
     };
   }
 
-  /**
-   * Cleanup hook
-   */
   protected override async onCleanup(): Promise<void> {
     const context = this.getContext();
     context.logger.info('Cleaning up ActiveScanner');
@@ -453,15 +443,11 @@ export class ActiveScanner extends BaseScanner {
     context.logger.info('ActiveScanner cleanup completed');
   }
 
-  /**
-   * Validează dacă URL-ul este valid pentru crawling
-   */
   private isValidUrl(url: string, baseUrl: string): boolean {
     try {
       const urlObj = new URL(url);
       const baseUrlObj = new URL(baseUrl);
 
-      // Same origin policy for crawling
       if (urlObj.hostname !== baseUrlObj.hostname) {
         return false;
       }

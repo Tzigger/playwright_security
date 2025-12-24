@@ -224,9 +224,21 @@ export class SqlInjectionDetector implements IActiveDetector {
     this.testedPayloads.clear();
 
     const sqlTargets = attackSurfaces.filter((surface) => {
+      // Skip API endpoints and API-like URL parameters if we want to delegate to sqlmap
+      // This assumes SqlMapDetector is enabled and will handle them
+      if (surface.type === AttackSurfaceType.API_ENDPOINT || surface.type === AttackSurfaceType.API_PARAM) {
+        return false;
+      }
+      
+      if (surface.type === AttackSurfaceType.URL_PARAMETER) {
+        const url = surface.metadata['url'] as string;
+        if (url && (url.includes('/rest/') || url.includes('/api/') || url.includes('/v1/'))) {
+          return false;
+        }
+      }
+
       const eligibleTypes = [
         AttackSurfaceType.FORM_INPUT,
-        AttackSurfaceType.API_PARAM,
         AttackSurfaceType.JSON_BODY,
         AttackSurfaceType.URL_PARAMETER,
       ];

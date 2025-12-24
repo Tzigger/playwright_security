@@ -14,6 +14,7 @@ export enum AttackSurfaceType {
   HEADER = 'header',
   JSON_BODY = 'json-body',
   API_PARAM = 'api-param',
+  API_ENDPOINT = 'api-endpoint',
 }
 
 /**
@@ -24,6 +25,7 @@ export enum InjectionContext {
   HTML_ATTRIBUTE = 'html-attribute',
   JAVASCRIPT = 'javascript',
   URL = 'url',
+  URL_PATH = 'url-path',
   SQL = 'sql',
   JSON = 'json',
   XML = 'xml',
@@ -268,6 +270,63 @@ export class DomExplorer {
         this.logger.info(`Discovered ${results.length} hidden endpoints in JS files`);
     }
     return results;
+  }
+
+  public async discoverSwaggerEndpoints(page: Page): Promise<AttackSurface[]> {
+    this.logger.info('Attempting to discover Swagger/OpenAPI documentation...');
+    const swaggerPaths = [
+      '/swagger.json',
+      '/api-docs',
+      '/v2/api-docs',
+      '/v3/api-docs',
+      '/openapi.json',
+      '/swagger/v1/swagger.json'
+    ];
+
+    const surfaces: AttackSurface[] = [];
+
+    for (const path of swaggerPaths) {
+      try {
+        const response = await page.request.get(path);
+        if (response.ok() && response.headers()['content-type']?.includes('json')) {
+          this.logger.info(`Found Swagger spec at ${path}`);
+          const spec = await response.json();
+          
+          if (spec.paths) {
+            for (const [endpointPath, methods] of Object.entries(spec.paths)) {
+              for (const [method] of Object.entries(methods as any)) {
+                // Convert Swagger path parameters {param} to actual values for testing
+                // Simple heuristic: replace {id} with 1, others with 'test'
+                const testPath = endpointPath.replace(/\{([^}]+)\}/g, (_, param) => {
+                  if (param.toLowerCase().includes('id')) return '1';
+                  return 'test';
+                });
+
+                surfaces.push({
+                  id: `swagger-${method}-${testPath}`,
+                  type: AttackSurfaceType.API_ENDPOINT,
+                  name: endpointPath,
+                  context: InjectionContext.URL_PATH,
+                  metadata: {
+                    url: testPath,
+                    method: method.toUpperCase(),
+                    source: 'swagger',
+                    basePath: path
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore 404s and other errors
+      }
+    }
+
+    if (surfaces.length > 0) {
+      this.logger.info(`Discovered ${surfaces.length} endpoints from Swagger`);
+    }
+    return surfaces;
   }
 
   public async prepareForms(page: Page): Promise<void> {

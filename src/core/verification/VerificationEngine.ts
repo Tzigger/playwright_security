@@ -6,18 +6,33 @@ import { TimeBasedVerifier } from './techniques/TimeBasedVerifier';
 import { ResponseDiffVerifier } from './techniques/ResponseDiffVerifier';
 import { VerificationConfig, VerificationStatus, VerificationLevel } from '../../types/verification';
 
+export interface VerificationResult {
+  shouldReport: boolean;
+  confidence: number;
+  status: string;
+  reason: string;
+}
+
 export class VerificationEngine {
+  private static instance: VerificationEngine;
   private logger: Logger;
   private timeBasedVerifier: TimeBasedVerifier;
   private responseDiffVerifier: ResponseDiffVerifier;
 
-  constructor() {
+  private constructor() {
     this.logger = new Logger(LogLevel.INFO, 'VerificationEngine');
     this.timeBasedVerifier = new TimeBasedVerifier();
     this.responseDiffVerifier = new ResponseDiffVerifier();
   }
 
-  public async verify(page: Page, vulnerability: Vulnerability): Promise<boolean> {
+  public static getInstance(): VerificationEngine {
+    if (!VerificationEngine.instance) {
+      VerificationEngine.instance = new VerificationEngine();
+    }
+    return VerificationEngine.instance;
+  }
+
+  public async verify(page: Page, vulnerability: Vulnerability, options?: { attemptTimeout?: number }): Promise<VerificationResult> {
     this.logger.info(`Verifying vulnerability: ${vulnerability.title} (${vulnerability.id})`);
 
     this.timeBasedVerifier.setPage(page);
@@ -25,7 +40,7 @@ export class VerificationEngine {
 
     const config: VerificationConfig = {
       level: VerificationLevel.STANDARD,
-      attemptTimeout: 10000,
+      attemptTimeout: options?.attemptTimeout || 10000,
       minConfidence: 0.7,
       maxAttempts: 2,
       stopOnConfirm: true
@@ -36,11 +51,11 @@ export class VerificationEngine {
         const result = await this.timeBasedVerifier.verify(vulnerability, config);
         if (result.status === VerificationStatus.CONFIRMED) {
           this.logger.info(`Vulnerability confirmed via Time-Based Verification: ${vulnerability.title}`);
-          return true;
+          return { shouldReport: true, confidence: 1.0, status: 'confirmed', reason: 'Time-based verification succeeded' };
         }
         if (result.status === VerificationStatus.FALSE_POSITIVE) {
           this.logger.info(`Vulnerability marked as False Positive via Time-Based Verification: ${vulnerability.title}`);
-          return false;
+          return { shouldReport: false, confidence: 0, status: 'false_positive', reason: 'Time-based verification failed' };
         }
       }
 
@@ -48,28 +63,38 @@ export class VerificationEngine {
         const result = await this.responseDiffVerifier.verify(vulnerability, config);
         if (result.status === VerificationStatus.CONFIRMED) {
           this.logger.info(`Vulnerability confirmed via Response Diff Verification: ${vulnerability.title}`);
-          return true;
+          return { shouldReport: true, confidence: 1.0, status: 'confirmed', reason: 'Response diff verification succeeded' };
         }
         if (result.status === VerificationStatus.FALSE_POSITIVE) {
           this.logger.info(`Vulnerability marked as False Positive via Response Diff Verification: ${vulnerability.title}`);
-          return false;
+          return { shouldReport: false, confidence: 0, status: 'false_positive', reason: 'Response diff verification failed' };
         }
       }
 
+      let isConfirmed = true;
       switch (vulnerability.category) {
         case VulnerabilityCategory.XSS:
-          return this.verifyXss(page, vulnerability);
+          isConfirmed = await this.verifyXss(page, vulnerability);
+          break;
         case VulnerabilityCategory.INJECTION:
           if (vulnerability.title.includes('SQL')) {
-            return this.verifySqli(page, vulnerability);
+            isConfirmed = await this.verifySqli(page, vulnerability);
           }
-          return true;
+          break;
         default:
-          return true;
+          isConfirmed = true;
       }
+
+      return {
+        shouldReport: isConfirmed,
+        confidence: isConfirmed ? 0.9 : 0,
+        status: isConfirmed ? 'confirmed' : 'false_positive',
+        reason: isConfirmed ? 'Standard verification passed' : 'Standard verification failed'
+      };
+
     } catch (error) {
       this.logger.error(`Verification failed with error: ${error}`);
-      return true;
+      return { shouldReport: true, confidence: 0.5, status: 'error', reason: `Verification error: ${error}` };
     }
   }
 

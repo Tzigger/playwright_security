@@ -8,6 +8,7 @@ import { PassiveScanner } from '../scanners/passive/PassiveScanner';
 import { ScanConfiguration } from '../types/config';
 import {
   AggressivenessLevel,
+  AuthType,
   BrowserType,
   LogLevel,
   ReportFormat,
@@ -26,6 +27,7 @@ interface CliOptions {
   parallel: string;
   scanType: CliScanType;
   safemodeDisable: boolean;
+  auth?: string;
 }
 
 const program = new Command();
@@ -43,6 +45,7 @@ program
   .option('--parallel <n>', 'Parallel scanners count', '2')
   .option('--scan-type <type>', 'Scan type: active, passive, or both', 'active')
   .option('--safemode-disable', 'Disable Safe Mode (Allow dangerous payloads)', false)
+  .option('--auth <credentials>', 'Basic auth credentials (username:password)')
   .action(async (url: string | undefined, options: CliOptions) => {
     try {
       const configManager = ConfigurationManager.getInstance();
@@ -57,6 +60,15 @@ program
         if (url) {
             config.target.url = url;
         }
+
+        // Override Auth from CLI
+        if (options.auth) {
+             const [username, password] = options.auth.split(':');
+             config.target.authentication = {
+                type: AuthType.FORM,
+                credentials: { username, password: password || '' }
+             };
+        }
       } else {
         if (!url) {
           console.error('Error: URL required when not using --config');
@@ -68,7 +80,16 @@ program
         const isActive = options.scanType === 'active' || options.scanType === 'both';
 
         config = {
-          target: { url },
+          target: { 
+            url,
+            authentication: options.auth ? {
+                type: AuthType.FORM,
+                credentials: {
+                    username: options.auth.split(':')[0],
+                    password: options.auth.split(':')[1] || ''
+                }
+            } : undefined
+          },
           browser: {
             type: BrowserType.CHROMIUM,
             headless: options.headless,
@@ -101,6 +122,7 @@ program
             // Optional detectors (e.g., ssrf/path-traversal/command-injection) must be enabled explicitly.
             enabled: [
               'sql-injection',
+              'sqlmap',
               'xss',
               'error-based',
               'sensitive-data',

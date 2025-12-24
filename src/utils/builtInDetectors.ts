@@ -8,6 +8,7 @@ import { InjectionDetector } from '../detectors/active/InjectionDetector';
 import { PathTraversalDetector } from '../detectors/active/PathTraversalDetector';
 import { SsrfDetector } from '../detectors/active/SsrfDetector';
 import { SqlInjectionDetector } from '../detectors/active/SqlInjectionDetector';
+import { SqlMapDetector } from '../detectors/active/SqlMapDetector';
 import { XssDetector } from '../detectors/active/XssDetector';
 import { CookieSecurityDetector } from '../detectors/passive/CookieSecurityDetector';
 import { HeaderSecurityDetector } from '../detectors/passive/HeaderSecurityDetector';
@@ -29,6 +30,15 @@ export function registerBuiltInDetectors(): void {
     type: 'active',
     category: 'sql',
     description: 'Detects SQL injection vulnerabilities (boolean, error, time-based)',
+    enabledByDefault: true,
+  });
+
+  registry.registerActiveDetector(new SqlMapDetector(), {
+    id: 'sqlmap',
+    name: 'SqlMap API Detector',
+    type: 'active',
+    category: 'sql',
+    description: 'Uses sqlmap to scan API endpoints discovered via Swagger',
     enabledByDefault: true,
   });
 
